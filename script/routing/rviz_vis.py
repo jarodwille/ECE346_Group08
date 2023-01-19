@@ -1,4 +1,5 @@
 import lanelet2
+from lanelet2.projection import LocalCartesianProjector
 import rospy
 from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point
@@ -99,3 +100,9 @@ def map_to_markerarray(map):
             
     return marker_array
     
+def load_lanelet_map(filename):
+    '''
+    Load a Lanelet2::LaneletMap object from a file
+    '''
+    projector = LocalCartesianProjector(lanelet2.io.Origin(0, 0, 0))
+    return lanelet2.io.load(filename, projector)
