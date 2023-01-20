@@ -1,18 +1,37 @@
 from ui import UI
-from util import gen_linestring, gen_lanelet
+from util import gen_linestring, gen_lanelet, load_lanelet_map, save_lanelet_map
 import inquirer
 import lanelet2
 from lanelet2.core import LaneletMap
 import numpy as np
+import os
 np.set_printoptions(precision=3, suppress=True)
 
 class LaneletBuilder:
-    def __init__(self, img_path, width, height) -> None:
+    def __init__(self, img_path, map_path, width, height) -> None:
+        self.map_path = map_path
         self.ui = UI(img_path, width, height)
         self.lanelet_dict = {}
         self.linestring_dict = {}
+        self.load_map()
         
-        self.lanelet_map = LaneletMap()
+    def load_map(self):
+        if os.path.isfile(self.map_path):
+            old_map = load_lanelet_map(self.map_path)
+            
+            # loop through linestrings
+            linestring_layer = old_map.lineStringLayer
+            for linestring in linestring_layer:
+                self.linestring_dict[linestring.id] = linestring
+                self.ui.plot_linestring(linestring, update=False)
+            
+            # loop through lanelets
+            lanelet_layer = old_map.laneletLayer
+            for lanelet in lanelet_layer:
+                self.lanelet_dict[lanelet.id] = lanelet
+                self.ui.plot_lanelet(lanelet, update=False)
+            self.ui.update_plot()
+            print("Loaded map from ", self.map_path)
         
     def choose_linestring_id(self):
         '''
@@ -57,7 +76,6 @@ class LaneletBuilder:
         q = [inquirer.List('q', message='Do you want to choose a linestring by id or by lanelet?',
                             choices=['id', 'lanelet'])]
         
-        linestring = None
         if inquirer.prompt(q)['q'] == 'id':
             linestring = self.choose_linestring_id()
         else:
@@ -71,8 +89,7 @@ class LaneletBuilder:
                 
     def build_linestring(self):
         q_type = [inquirer.List('q_type', message='Do type of linestring?',
-                                    choices=['solid', 'solid_solid	', 'dashed', 
-                                            'dashed_solid', 'solid_dashed'])]
+                                    choices=['solid', 'solid_solid', 'dashed', 'virtual'])]
         
         start_point = None
         end_point = None
@@ -81,13 +98,13 @@ class LaneletBuilder:
         if inquirer.prompt(q_start)['q']:
             prev_linestring = self.choose_linestring()
             start_point = prev_linestring[-1]
-            print("Get start point: ", start_point, " from the end of linestring: ", prev_linestring)
+            print("Get start point: ", start_point, " from the end of linestring: ", prev_linestring.id)
         
         q_end = [inquirer.Confirm('q', message='Do you want to choose an existing end point?')]
         if inquirer.prompt(q_end)['q']:
             next_linestring = self.choose_linestring()
             end_point = next_linestring[0]
-            print("Get end point: ", end_point, " from the front of linestring: ", next_linestring)
+            print("Get end point: ", end_point, " from the front of linestring: ", next_linestring.id)
         # get the type of linestring
         linestring_type = inquirer.prompt(q_type)['q_type']
         print("Start selecting points for the new linestring!")
@@ -136,24 +153,31 @@ class LaneletBuilder:
         else:
             print(f'lanelet {id} does not exist. Please try again.')
 
+    def save_map(self):
+        map_to_save = LaneletMap()
+        for lanelet in self.lanelet_dict.values():
+            map_to_save.add(lanelet)
+        save_lanelet_map(map_to_save, self.map_path)
+        print("Map saved to: ", self.map_path)
+        
     def run(self):
         q_main = [inquirer.List('main', message='What do you want to do?',
-                                choices=['Add', 'Remove', 'Quit'])]
+                                choices=['Add', 'Remove', 'Save', 'Quit'])]
         while True:
             choice = inquirer.prompt(q_main)['main']
             if choice == 'Quit':
+                self.save_map()
                 break
             elif choice == 'Remove':
                 self.remove_lanelet()
+            elif choice == 'Save':
+                self.save_map()
             else:
                 self.build_lanelet()
-            
-        for lanelet in self.lanelet_dict.values():
-            self.lanelet_map.add(lanelet)
-        self.lanelet_map.write('track.osm')
 
 
 if __name__ == '__main__':
     img_path = 'IMG_0098.jpeg'
-    builder = LaneletBuilder(img_path, 6.05, 6.05)
+    map_path = 'track.osm'
+    builder = LaneletBuilder(img_path, map_path, 6.05, 6.05)
     builder.run()
