@@ -40,7 +40,7 @@ def gen_linestring(pts, start_point = None, end_point = None, line_type = 'dashe
             else:
                 line_string.append(end_point)
         
-    return line_string, start_point, end_point
+    return line_string
 
 def gen_lanelet(left_line, right_line):
     '''
