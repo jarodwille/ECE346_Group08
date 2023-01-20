@@ -4,6 +4,17 @@ from lanelet2.core import (getId, Point3d, LineString3d,
 
 from lanelet2.projection import LocalCartesianProjector
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    
 def gen_point(pt):
     '''
     Generate a Lanelet2::Point2d object from a tuple/list/nparray of 2d coordinates

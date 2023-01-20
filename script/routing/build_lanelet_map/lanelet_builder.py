@@ -1,5 +1,5 @@
 from ui import UI
-from util import gen_linestring, gen_lanelet, load_lanelet_map, save_lanelet_map
+from util import gen_linestring, gen_lanelet, load_lanelet_map, save_lanelet_map, bcolors
 import inquirer
 import lanelet2
 from lanelet2.core import LaneletMap
@@ -139,7 +139,7 @@ class LaneletBuilder:
         new_lanelet = gen_lanelet(left_linestring, right_linestring)
         self.ui.plot_lanelet(new_lanelet)
         self.lanelet_dict[new_lanelet.id] = new_lanelet
-        print("New lanelet created: ", new_lanelet)
+        print(f"{bcolors.OKGREEN}New lanelet created: ", new_lanelet, f"{bcolors.ENDC}")
         
     def remove_lanelet(self):
         '''
