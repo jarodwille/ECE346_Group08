@@ -7,7 +7,7 @@ def main():
     rospy.init_node('routing_node')
     rospy.loginfo("Start routing node")
     
-    map = load_lanelet_map("/hdd/ROS_dir/routing/src/PrincetonRaceCar_routing/script/routing/mapping_example.osm")
+    map = load_lanelet_map("/hdd/ROS_dir/routing/src/PrincetonRaceCar_routing/script/routing/build_lanelet_map/track.osm")
     marker_array = map_to_markerarray(map)
     
     pub = rospy.Publisher('lanelet_marker_array', MarkerArray, queue_size=10)

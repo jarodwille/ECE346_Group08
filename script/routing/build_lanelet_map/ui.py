@@ -19,7 +19,7 @@ class UI:
     def load_image(self, path):
         print("Loading image from {}".format(path))
         self.fig, self.ax = plt.subplots()
-        self.fig.set_size_inches(12, 8)
+        self.fig.set_size_inches(10, 8)
         img = imio.imread(path)
         self.im_height, self.im_width, _ = img.shape
         self.ax.imshow(img)
@@ -78,7 +78,7 @@ class UI:
             self.update_plot()
     
     def update_plot(self):
-        self.ax.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+        # self.ax.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
         
@@ -87,22 +87,32 @@ class UI:
         point_xy = np.zeros((2, num_points))
         
         label = 'linestring'+str(linestring.id)
-        linewidth = 1
+        linewidth = 1.5
         
-        if linestring.attributes['type'] == 'virtual':
-            line_type = ':o'
+        if 'type' not in linestring.attributes:
+            line_type = ':'
+            linewidth = 1
+        elif linestring.attributes['type'] == 'virtual':
+            line_type = ':'
         elif linestring.attributes['subtype'] == 'dashed':
-            line_type = '--o'
+            line_type = '--'
         elif linestring.attributes['subtype'] == 'solid_solid':
-            line_type = '-.o'
+            line_type = '-.'
+        elif linestring.attributes['subtype'] == 'solid':
+            line_type = '-'
         else:
-            line_type = '-o'
+            line_type = ':'
+
+            
+            
         for i in range(num_points):
             point_xy[0,i] = linestring[i].x
             point_xy[1,i] = linestring[i].y
         point_ij = self.xy2point(point_xy)
         self.ax.plot(point_ij[0,:], point_ij[1,:], line_type, 
-                    linewidth=linewidth, label=label)
+                    linewidth=linewidth,
+                    markersize=3,
+                    label=label)
         if update:
             self.update_plot()
         
