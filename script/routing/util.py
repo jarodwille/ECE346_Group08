@@ -105,14 +105,6 @@ def map_to_markerarray(lanelet_map):
             
     return marker_array
     
-def load_lanelet_map(filename):
-    '''
-    Load a Lanelet2::LaneletMap object from a file
-    '''
-    projector = LocalCartesianProjector(lanelet2.io.Origin(0, 0, 0))
-    return lanelet2.io.load(filename, projector)
-
-
 '''
 Utility functions for ROS
 '''
