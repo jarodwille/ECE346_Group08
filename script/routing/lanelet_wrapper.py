@@ -3,7 +3,7 @@ from lanelet2.core import BasicPoint2d, BasicPoint3d
 from lanelet2.projection import LocalCartesianProjector
 from lanelet2.geometry import to2D, toArcCoordinates, fromArcCoordinates, ArcCoordinates
 
-from script.routing.util import get_ros_param
+from .util import get_ros_param
 import rospy
 import numpy as np
 

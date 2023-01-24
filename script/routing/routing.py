@@ -3,8 +3,8 @@ from visualization_msgs.msg import MarkerArray
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
-from lanelet_wrapper import LaneletWrapper
-from util import map_to_markerarray, get_ros_param
+from .lanelet_wrapper import LaneletWrapper
+from .util import map_to_markerarray, get_ros_param
 import message_filters
 
 
@@ -21,6 +21,11 @@ class Routing:
             if self.map_pub.get_num_connections() > 0:
                 break
         
+    def run(self):
+        rate = rospy.Rate(50)
+        while not rospy.is_shutdown():
+            self.publish_map()
+            rate.sleep()
         
     def read_parameters(self):
         self.odom_topic = get_ros_param('~odom_topic', '/slam_pose')

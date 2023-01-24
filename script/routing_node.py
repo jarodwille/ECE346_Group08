@@ -6,10 +6,10 @@ def main():
     rospy.init_node('routing_node')
     rospy.loginfo("Start routing node")
     
-    map_file = rospy.get_param("lane_change_cost")
+    map_file = rospy.get_param("~map_file")
     routing = Routing(map_file)
     
-    rospy.spin()
+    routing.run()
 
 if __name__ == '__main__':
     main()

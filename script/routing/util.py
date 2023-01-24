@@ -13,7 +13,7 @@ def LineString3d_to_marker(line_string, id):
     def yellow_solid(marker):
         marker.type = Marker.LINE_STRIP
         
-        marker.scale.x = 0.2
+        marker.scale.x = 0.02
         marker.scale.y = 0
         marker.scale.z = 0
         
@@ -25,19 +25,19 @@ def LineString3d_to_marker(line_string, id):
     def white_dashed(marker):
         marker.type = Marker.LINE_STRIP
         
-        marker.scale.x = 0.1
+        marker.scale.x = 0.01
         marker.scale.y = 0
         marker.scale.z = 0
         
         marker.color.r = 255.0/255.0
         marker.color.g = 255.0/255.0
         marker.color.b = 255.0/255.0
-        marker.color.a = 1.0
+        marker.color.a = 0.5
         
     def white_solid(marker):
-        marker.type = Marker.LINE_LIST
+        marker.type = Marker.LINE_STRIP
         
-        marker.scale.x = 0.1
+        marker.scale.x = 0.01
         marker.scale.y = 0
         marker.scale.z = 0
         
@@ -49,14 +49,14 @@ def LineString3d_to_marker(line_string, id):
     def virtual(marker):
         marker.type = Marker.POINTS
         
-        marker.scale.x = 0.2
-        marker.scale.y = 0.2      
+        marker.scale.x = 0.02
+        marker.scale.y = 0.02      
         marker.scale.z = 0
         
-        marker.color.r = 255.0/255.0
-        marker.color.g = 255.0/255.0
-        marker.color.b = 255.0/255.0
-        marker.color.a = 0.3
+        marker.color.r = 192.0/255.0
+        marker.color.g = 192.0/255.0
+        marker.color.b = 192.0/255.0
+        marker.color.a = 0.4
     
     # Main function
     marker = Marker()
@@ -78,11 +78,12 @@ def LineString3d_to_marker(line_string, id):
     
     num_pt = len(line_string)
     
-    if line_string.attributes["subtype"] == "solid_solid":
+    if line_string.attributes["type"] == "virtual":
+        virtual(marker)
+    elif line_string.attributes["subtype"] == "solid_solid":
         yellow_solid(marker)
     elif line_string.attributes["subtype"] == "dashed":
         white_dashed(marker)
-        num_pt = int(num_pt/2)*2 # make sure the number of points is even
     elif line_string.attributes["subtype"] == "solid":
         white_solid(marker)
     else:
@@ -91,6 +92,9 @@ def LineString3d_to_marker(line_string, id):
     for i in range(num_pt):
         point = line_string[i]
         marker.points.append(Point(point.x, point.y, 0))
+    if num_pt % 2 == 1:
+        point = line_string[-1]
+        marker.points.append(Point(point.x, point.y, 0))
     return marker
 
 def map_to_markerarray(lanelet_map):
@@ -98,10 +102,9 @@ def map_to_markerarray(lanelet_map):
     marker_array = MarkerArray()
     linestring_layer = lanelet_map.lineStringLayer
     for line_string in linestring_layer:
-        if line_string.attributes["type"] == "line_thin" and "subtype" in line_string.attributes:
-            marker = LineString3d_to_marker(line_string, i)
-            i+=1
-            marker_array.markers.append(marker)
+        marker = LineString3d_to_marker(line_string, i)
+        i+=1
+        marker_array.markers.append(marker)
             
     return marker_array
     
