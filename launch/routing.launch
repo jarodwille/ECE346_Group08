@@ -1,7 +1,7 @@
 <launch>
     <arg name="output"            default="screen"    doc="display output to screen or log file"/>
     <arg name="odom_topic"   default="/sim_pose"    doc="ROS topic for the pose"/>
-    <arg name="lane_change_cost"  default="0"    doc="cost of lane change"/>
+    <arg name="lane_change_cost"  default="1"    doc="cost of lane change"/>
     
     <node pkg="racecar_routing" type="routing_node.py" name="routing_node" output="$(arg output)">
         <param name="odom_topic"           value="$(arg odom_topic)" />

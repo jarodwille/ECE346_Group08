@@ -31,8 +31,8 @@ class Routing:
         self.odom_topic = get_ros_param('~odom_topic', '/slam_pose')
         
     def setup_publisher(self):
-        self.map_pub = rospy.Publisher('Map', MarkerArray, queue_size=10)
-        self.path_pub = rospy.Publisher('Path', Path, queue_size=10)
+        self.map_pub = rospy.Publisher('Routing/Map', MarkerArray, queue_size=10)
+        self.path_pub = rospy.Publisher('Routing/Path', Path, queue_size=10)
         
     def setup_subscriber(self):
         pose_sub = message_filters.Subscriber(self.odom_topic, Odometry)

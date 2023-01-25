@@ -42,7 +42,7 @@ class LaneletWrapper:
         This function reads the parameters from the parameter server
         '''
         
-        self.lane_change_cost = get_ros_param("~lane_change_cost", 0.0)
+        self.lane_change_cost = get_ros_param("~lane_change_cost", 1)
         
     def find_lanelet_by_xy(self, pt):
         '''
@@ -77,7 +77,7 @@ class LaneletWrapper:
             rospy.logwarn(f"End point [{x_end}, {y_end}] is not inside a lanelet")
         
         path = self.routing_graph.shortestPath(start_lanelet, end_lanelet, 0, allow_lane_change)
-        return self.get_path_centerline(path, start_point, end_point)
+        return self.get_path_centerline(path, start_point, end_point, allow_lane_change)
 
     def get_path_centerline(self, path, start_point = None, end_point = None, allow_lane_change = True):
         '''
@@ -94,13 +94,14 @@ class LaneletWrapper:
             # add start point
             cl = to2D(path[0].centerline)
             cl_length = lanelet2.geometry.length(cl)
-            dis_start = self.get_dis_from_point(cl, start_point.x, start_point.y)
-            prev_start = dis_start / cl_length
+            prev_start = self.get_dis_from_point(cl, start_point.x, start_point.y) / cl_length
+            prev_start = min(0.95, prev_start)
         
         last_lanelet = path[-1]
         if end_point is not None:
             cl = to2D(last_lanelet.centerline)
-            dis_end = self.get_dis_from_point(cl, end_point.x, end_point.y)
+            cl_length = lanelet2.geometry.length(cl)
+            dis_end = self.get_dis_from_point(cl, end_point.x, end_point.y) /cl_length
         else:
             dis_end = 1
             
@@ -120,12 +121,12 @@ class LaneletWrapper:
                                                                 allow_lane_change = allow_lane_change))
                 prev_start = cur_end
             else:
-                path_centerline.extend(self.get_centerline_section(cur_lanelet, prev_start, 1,
+                path_centerline.extend(self.get_centerline_section(cur_lanelet, prev_start, 0.95,
                                                                 include_end_point = False,
                                                                 allow_lane_change = allow_lane_change))
                 prev_start = 0
             
-        path_centerline.extend(self.get_centerline_section(last_lanelet, prev_start, dis_end))
+        path_centerline.extend(self.get_centerline_section(last_lanelet, prev_start, dis_end, include_end_point = True))
         
         
         return path_centerline
@@ -175,7 +176,6 @@ class LaneletWrapper:
             pt_end = fromArcCoordinates(centerline, arc_coord)
             width_left, width_right = self.get_lane_width(pt, lanelet, allow_lane_change)
             centerline_section.append([pt_end.x, pt_end.y, width_left, width_right, speed_limit])
-            
         return centerline_section
     
     def get_lane_width(self, point, lanelet, allow_lane_change = True):
