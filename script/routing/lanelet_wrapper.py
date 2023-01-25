@@ -63,13 +63,28 @@ class LaneletWrapper:
         return:
             path: a list of lanelet ids
         '''
+        path_centerline = []
+        
         start_point = BasicPoint2d(float(x_start),float(y_start))
         end_point = BasicPoint2d(float(x_end),float(y_end))
         
         # get the nearest lanelet to the start and end point
         dis_to_start, start_lanelet = self.find_lanelet_by_xy(start_point)
         dis_to_end, end_lanelet = self.find_lanelet_by_xy(end_point)
-        
+        if start_lanelet.id == end_lanelet.id:
+            
+            cl = to2D(start_lanelet.centerline)
+            cl_length = lanelet2.geometry.length(cl)
+            dis_start = self.get_dis_from_point(cl, start_point.x, start_point.y) / cl_length
+            dis_end = self.get_dis_from_point(cl, end_point.x, end_point.y) /cl_length
+            if dis_end < dis_start:
+                # in this case, the start and end point are on the same lanelet, but the end point is behind the start point
+                path_centerline.extend(self.get_path_centerline([start_lanelet], start_point, None, False))
+                start_lanelet = self.routing_graph.following(start_lanelet, False)[0]
+                start_point = None
+            elif dis_end == dis_start:
+                return [] # same point, no path
+            
         if dis_to_start > 0:
             rospy.logwarn(f"Start point [{x_start}, {y_start}] is not inside a lanelet")
         
@@ -77,7 +92,9 @@ class LaneletWrapper:
             rospy.logwarn(f"End point [{x_end}, {y_end}] is not inside a lanelet")
         
         path = self.routing_graph.shortestPath(start_lanelet, end_lanelet, 0, allow_lane_change)
-        return self.get_path_centerline(path, start_point, end_point, allow_lane_change)
+        path_centerline.extend(self.get_path_centerline(path, start_point, end_point, allow_lane_change))
+        return path_centerline
+        
 
     def get_path_centerline(self, path, start_point = None, end_point = None, allow_lane_change = True):
         '''
@@ -145,7 +162,9 @@ class LaneletWrapper:
         speed_limit = self.get_lanelet_speed_limit(lanelet)
         
         assert norm_dis_start*norm_dis_end >= 0, "The start and end length must have the same sign"
-        assert abs(norm_dis_start) < abs(norm_dis_end), f"The start distance {norm_dis_start} must be smaller than the end distance {norm_dis_end}"
+        if abs(norm_dis_start) > abs(norm_dis_end):
+            rospy.logwarn(f"The start distance {norm_dis_start} must be smaller than the end distance {norm_dis_end}")
+            return centerline_section
         if norm_dis_start < 0:
             centerline = centerline.invert()
         dis_start = max(abs(norm_dis_start) * length, 0)

@@ -49,6 +49,9 @@ class Routing:
         goal_y = goal.pose.position.y
         
         path = self.lanelet_wrapper.get_shortest_path(pose_x, pose_y, goal_x, goal_y)
+        if len(path) == 0:
+            rospy.logwarn('No path found')
+            return
         
         path_msg = Path()
         path_msg.header = pose.header
