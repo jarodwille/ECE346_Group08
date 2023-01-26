@@ -71,7 +71,12 @@ class LaneletWrapper:
         # get the nearest lanelet to the start and end point
         dis_to_start, start_lanelet = self.find_lanelet_by_xy(start_point)
         dis_to_end, end_lanelet = self.find_lanelet_by_xy(end_point)
-        if start_lanelet.id == end_lanelet.id:
+        
+        relation = self.routing_graph.routingRelation(start_lanelet, end_lanelet, True)
+        
+        if start_lanelet.id == end_lanelet.id or \
+            relation == lanelet2.routing.RelationType.Left \
+            or relation == lanelet2.routing.RelationType.Right:
             
             cl = to2D(start_lanelet.centerline)
             cl_length = lanelet2.geometry.length(cl)
@@ -112,7 +117,7 @@ class LaneletWrapper:
             cl = to2D(path[0].centerline)
             cl_length = lanelet2.geometry.length(cl)
             prev_start = self.get_dis_from_point(cl, start_point.x, start_point.y) / cl_length
-            prev_start = min(0.95, prev_start)
+            prev_start = min(0.98, prev_start)
         
         last_lanelet = path[-1]
         if end_point is not None:
@@ -130,15 +135,17 @@ class LaneletWrapper:
             if relation == lanelet2.routing.RelationType.Left \
                     or relation == lanelet2.routing.RelationType.Right:
                 if i == num_lanelet-2: # need a lane change to the last lanelet
-                    cur_end = (dis_end-prev_start)/2 + prev_start
+                    cur_end = (dis_end-prev_start)*0.3 + prev_start
+                    next_start = (dis_end-prev_start)*0.7 + prev_start
                 else:
-                    cur_end = (1 - prev_start)/2 + prev_start
+                    cur_end = (0.98 - prev_start)*0.3 + prev_start
+                    next_start = (0.98-prev_start)*0.7 + prev_start
                 path_centerline.extend(self.get_centerline_section(cur_lanelet, prev_start, 
                                                                 cur_end, include_end_point = False,
                                                                 allow_lane_change = allow_lane_change))
-                prev_start = cur_end
+                prev_start = next_start
             else:
-                path_centerline.extend(self.get_centerline_section(cur_lanelet, prev_start, 0.95,
+                path_centerline.extend(self.get_centerline_section(cur_lanelet, prev_start, 0.99,
                                                                 include_end_point = False,
                                                                 allow_lane_change = allow_lane_change))
                 prev_start = 0
