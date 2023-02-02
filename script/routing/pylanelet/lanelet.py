@@ -1,5 +1,5 @@
 import pyspline
-import shapely
+# import shapely
 import numpy as np
 from typing import Union
 from .linestring import PyLineString
@@ -24,6 +24,8 @@ class PyLaneLet:
         self.successor = []
         self.left = []
         self.right = []
+        
+        self.speed_limit = 2.0
         
     def get_section_width(self, start: float, end: float, endpoint: bool=False, num: int = 100):
         '''

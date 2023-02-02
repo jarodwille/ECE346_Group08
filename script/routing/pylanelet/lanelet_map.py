@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+import matplotlib.pyplot as plt
 from .lanelet import PyLaneLet
 
 class PyLaneletMap:
@@ -62,7 +63,7 @@ class PyLaneletMap:
         '''
         Build networkx graph for routing
         '''
-        print("Building graph with lane change cost: ", lane_change_cost)
+        print("Building routing graph with lane change cost: ", lane_change_cost)
         for lanelet in self.lanelets.values():
             cur_id = lanelet.id
             # lane change
@@ -110,7 +111,7 @@ class PyLaneletMap:
                 return None
             if end_s < start_s:
                 centerline_list.append(
-                    start_lanelet.get_section_centerline(start_s, 1, endpoint = False)
+                    self.get_reference(start_lanelet, start_s, 1, endpoint = False)
                     )
                 route_cost = float('inf')
                 # search through successors for the best route
@@ -142,12 +143,58 @@ class PyLaneletMap:
                 cur_end = 1
                 next_start = 0
             centerline_list.append(
-                cur_lanelet.get_section_centerline(start_s, cur_end, endpoint = False)
+                self.get_reference(cur_lanelet, start_s, cur_end, endpoint = False)
                 )
             start_s = next_start
         
         centerline_list.append(
-            end_lanelet.get_section_centerline(start_s, end_s, endpoint = True)
+            self.get_reference(end_lanelet, start_s, end_s, endpoint = True)
             )
         
         return np.concatenate(centerline_list, axis=0)
+    
+    def plot_map(self):
+        plt.figure(figsize=(10, 10))
+        plotted_linestring = []
+        for _, lanelet in self.lanelets.items():
+            if lanelet.left_boundary.id not in plotted_linestring:
+                points = lanelet.left_boundary.sample_points(0, 1, True)
+                plt.plot(points[:, 0], points[:, 1], 'k')
+                plotted_linestring.append(lanelet.left_boundary.id)
+            if lanelet.right_boundary.id not in plotted_linestring:
+                points = lanelet.right_boundary.sample_points(0, 1, True)
+                plt.plot(points[:, 0], points[:, 1], 'k')
+                plotted_linestring.append(lanelet.right_boundary.id)
+                
+        plt.axis('equal')
+        
+    def get_reference(self, lanelet, start_s, end_s, endpoint: bool = False):
+        '''
+        Get the reference line of a lanelet 
+        Parameters:
+            lanlet: the lanelet
+            start_s: the start s value
+            end_s: the end s value
+        return:
+            reference line:[Nx5], [x,y,left_width,right_width,speed_limit]
+        '''
+        center_line = lanelet.get_section_centerline(start_s, end_s, endpoint = endpoint)
+        
+        cur_width = lanelet.get_section_width(start_s, end_s, endpoint = endpoint)
+        left_width = cur_width/2
+        right_width = cur_width/2
+        
+        for left_id in lanelet.left:
+            left_lanelet = self.lanelets[left_id]
+            left_width += left_lanelet.get_section_width(start_s, end_s, endpoint = endpoint)
+        
+        for right_id in lanelet.right:
+            right_lanelet = self.lanelets[right_id]
+            right_width += right_lanelet.get_section_width(start_s, end_s, endpoint = endpoint)
+        
+        left_width = left_width[:, np.newaxis]
+        right_width = right_width[:, np.newaxis]
+        speed_limit = lanelet.speed_limit*np.ones_like(left_width)
+        
+        reference = np.concatenate([center_line, left_width, right_width, speed_limit], axis=1)
+        return reference

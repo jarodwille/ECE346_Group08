@@ -3,6 +3,7 @@ from .linestring import PyLineString, LineType
 from .lanelet import PyLaneLet
 from .lanelet_map import PyLaneletMap
 import matplotlib.pyplot as plt
+import pickle
 
 try:
     import lanelet2
@@ -31,7 +32,7 @@ class Lanelet2Converter:
         
         self.pylanelet_map = PyLaneletMap()
         
-        self.convert_lanelet2()
+        
     
     def load_lanelet2_map(self, map_file: str) -> None:
         '''
@@ -51,8 +52,13 @@ class Lanelet2Converter:
             
             pylanelet = PyLaneLet(id, center_line, left_boundary, right_boundary)
             
+            # set speed limit
+            if "speed" in lanelet.attributes:
+                pylanelet.speed_limit = float(lanelet.attributes["speed"])
+            
             # add relations
             predcessors = self.routing_graph.previous(lanelet, False)
+            
             if predcessors:
                 for predcessor in predcessors:
                     pylanelet.add_predecessor(predcessor.id)
@@ -129,3 +135,11 @@ class Lanelet2Converter:
                 plotted_linestring.append(lanelet.right_boundary.id)
                 
         plt.axis('equal')
+        
+    def save_map(self, filename: str):
+        with open(filename, 'wb') as f:
+            pickle.dump(self.pylanelet_map, f, pickle.HIGHEST_PROTOCOL)
+            
+            
+
+    

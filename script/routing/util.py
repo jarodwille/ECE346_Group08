@@ -1,14 +1,13 @@
-import lanelet2
-from lanelet2.projection import LocalCartesianProjector
 import rospy
 from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point
+from .pylanelet import LineType, PyLineString
 
 '''
 Utility functions for lanelet2 visualization
 '''
 
-def LineString3d_to_marker(line_string, id):
+def linestring_to_marker(line_string: PyLineString):
     # Helper functions
     def yellow_solid(marker):
         marker.type = Marker.LINE_STRIP
@@ -23,7 +22,7 @@ def LineString3d_to_marker(line_string, id):
         marker.color.a = 1.0
         
     def white_dashed(marker):
-        marker.type = Marker.LINE_STRIP
+        marker.type = Marker.LINE_LIST
         
         marker.scale.x = 0.01
         marker.scale.y = 0
@@ -63,7 +62,7 @@ def LineString3d_to_marker(line_string, id):
     marker.header.frame_id = "map"
     marker.header.stamp = rospy.Time.now()
     marker.ns = "lanelet"
-    marker.id = id #
+    marker.id = line_string.id #
     marker.action = 0 # add or modify
     marker.lifetime = rospy.Duration(0)
     
@@ -75,36 +74,37 @@ def LineString3d_to_marker(line_string, id):
     marker.pose.orientation.y = 0
     marker.pose.orientation.z = 0
     marker.pose.orientation.w = 1
-    
-    num_pt = len(line_string)
-    
-    if line_string.attributes["type"] == "virtual":
+        
+    if line_string.type == LineType.VIRTUAL_LINE:
         virtual(marker)
-    elif line_string.attributes["subtype"] == "solid_solid":
-        yellow_solid(marker)
-    elif line_string.attributes["subtype"] == "dashed":
-        white_dashed(marker)
-    elif line_string.attributes["subtype"] == "solid":
+    elif line_string.type == LineType.WHITE_SOLID:
         white_solid(marker)
+    elif line_string.type == LineType.WHITE_DASHED:
+        white_dashed(marker)
+    elif line_string.type == LineType.DOUBLE_YELLOW:
+        yellow_solid(marker)
     else:
         virtual(marker)
+    
 
-    for i in range(num_pt):
-        point = line_string[i]
-        marker.points.append(Point(point.x, point.y, 0))
-    if num_pt % 2 == 1:
-        point = line_string[-1]
-        marker.points.append(Point(point.x, point.y, 0))
+    num_pt = max(int(line_string.length/0.2)*2, 2)
+    sampled_points = line_string.sample_points(0, 1, True, num_pt)
+    
+    for pt in sampled_points:
+        marker.points.append(Point(pt[0], pt[1], 0))
+    
     return marker
 
 def map_to_markerarray(lanelet_map):
-    i = 0
     marker_array = MarkerArray()
-    linestring_layer = lanelet_map.lineStringLayer
-    for line_string in linestring_layer:
-        marker = LineString3d_to_marker(line_string, i)
-        i+=1
-        marker_array.markers.append(marker)
+    plotted_linestring = []
+    for lanelet in lanelet_map.lanelets.values():
+        if lanelet.left_boundary.id not in plotted_linestring:
+            marker_array.markers.append(linestring_to_marker(lanelet.left_boundary))
+            plotted_linestring.append(lanelet.left_boundary.id)
+        if lanelet.right_boundary.id not in plotted_linestring:
+            marker_array.markers.append(linestring_to_marker(lanelet.right_boundary))
+            plotted_linestring.append(lanelet.right_boundary.id)
             
     return marker_array
     
