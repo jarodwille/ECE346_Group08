@@ -8,10 +8,10 @@ class LineType:
     VIRTUAL_LINE = 3
     CENTER_LINE = 4
 
-class LineString:
+class PyLineString:
     def __init__(self, line_id: int, points: np.ndarray, line_type: LineType) -> None:
         '''
-        Constructor for LineString
+        Constructor for PyLineString
         :param id: ID of the line string
         :param points: Nx2 array of points (x,y) in the line string
         '''
@@ -22,9 +22,9 @@ class LineString:
         self.type = line_type
         
     def __str__(self) -> str:
-        return f'LineString {self.id} with type {self.type} and length {self.length}'
+        return f'PyLineString {self.id} with type {self.type} and length {self.length}'
         
-    def sample_points(self, start: float = 0, end: float = 1, n: int = 100) -> np.ndarray:
+    def sample_points(self, start: float = 0, end: float = 1, endpoint: bool=False, num: int = 100) -> np.ndarray:
         '''
         Uniformly sample n points along the line string between start and end
         :param start: normalized start position [0,1)
@@ -32,16 +32,26 @@ class LineString:
         :param n: number of points to sample
         :return: Nx2 array of points (x,y)
         '''
-        sampled_s = np.linspace(start, end, n) 
+        sampled_s = np.linspace(start, end, num, endpoint=endpoint) 
         
         return self.spline.getValue(sampled_s)
     
-    def project_point(self, point: np.ndarray) -> float:
+    def project_points(self, points: np.ndarray) -> float:
         '''
         Project a point onto the line string
-        :param point: 2D point (x,y) or a Nx2 array of points
+        :param points: 2D point (x,y) or a Nx2 array of points
         :return: closest point(s) on the line string (Nx2 array) 
         '''
-        s, _ = self.spline.projectPoint(point)
-        projected_point = self.spline.getValue(s)
-        return projected_point
+        s, _ = self.spline.projectPoint(points)
+        projected_points = self.spline.getValue(s)
+        return projected_points
+    
+    def distance_to_point(self, point: np.ndarray) -> float:
+        '''
+        Compute distance between a point and the line string
+        :param point: 2D point (x,y)
+        :return: distance(s) to the line string
+        '''
+        point = point.astype(float)
+        _, d = self.spline.projectPoint(point)
+        return np.sqrt(d[0]**2 + d[1]**2)

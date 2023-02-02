@@ -43,7 +43,7 @@ class LaneletWrapper:
         '''
         
         self.lane_change_cost = get_ros_param("~lane_change_cost", 1)
-        
+    
     def find_lanelet_by_xy(self, pt):
         '''
         Given:
@@ -99,8 +99,7 @@ class LaneletWrapper:
         path = self.routing_graph.shortestPath(start_lanelet, end_lanelet, 0, allow_lane_change)
         path_centerline.extend(self.get_path_centerline(path, start_point, end_point, allow_lane_change))
         return path_centerline
-        
-
+    
     def get_path_centerline(self, path, start_point = None, end_point = None, allow_lane_change = True):
         '''
         Given:
@@ -154,7 +153,7 @@ class LaneletWrapper:
         
         
         return path_centerline
-        
+    
     def get_centerline_section(self, lanelet, norm_dis_start, 
                             norm_dis_end, include_end_point = False, 
                             allow_lane_change = True):
@@ -321,10 +320,8 @@ class LaneletWrapper:
         Save a Lanelet2::LaneletMap object to a file
         '''
         lanelet2.io.write(osm_file, lanelet_map, self.projector)
-        
-        
+    
     ''' Following are helper functions for lanelet2 objects '''
-
     def warmup(self):
         '''
         This function is used to warmup the lanelet2 library
