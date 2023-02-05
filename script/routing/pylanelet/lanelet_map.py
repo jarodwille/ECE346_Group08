@@ -86,7 +86,6 @@ class PyLaneletMap:
         for i in range(len(route)-1):
             route_length += self.routing_graph[route[i]][route[i+1]]['weight']
         
-        print(route_length)
         return route, route_length
     
     def get_shortest_path(self, start, end, start_pose: bool = False, end_pose: bool = False):
