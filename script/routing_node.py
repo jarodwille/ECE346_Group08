@@ -7,9 +7,9 @@ def main():
     rospy.loginfo("Start routing node")
     
     map_file = rospy.get_param("~map_file")
-    routing = Routing(map_file)
+    Routing(map_file)
     
-    routing.run()
+    rospy.spin()
 
 if __name__ == '__main__':
     main()

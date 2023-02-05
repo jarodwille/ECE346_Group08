@@ -107,5 +107,6 @@ catkin_package(
 
 install(PROGRAMS
   script/routing_node.py
+  script/map_vis_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

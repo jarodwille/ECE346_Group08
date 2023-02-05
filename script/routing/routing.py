@@ -21,7 +21,6 @@ class Routing:
             self.lanelet_map = pickle.load(f)
             
         self.goal_with_heading = False
-        self.map_message = None
         
         self.lanelet_map.build_graph(self.lane_change_cost)
         
@@ -29,13 +28,7 @@ class Routing:
         
         self.setup_publisher()
         self.setup_subscriber() 
-        
-    def run(self):
-        rate = rospy.Rate(50)
-        while not rospy.is_shutdown():
-            self.publish_map()
-            rate.sleep()
-            
+                    
     def reconfigure_callback(self, config, level):
         self.goal_with_heading = config['goal_with_heading']
         rospy.loginfo(f"Set goal_with_heading to {self.goal_with_heading}")
@@ -46,7 +39,6 @@ class Routing:
         self.lane_change_cost = get_ros_param('~lane_change_cost', 0.5)
         
     def setup_publisher(self):
-        self.map_pub = rospy.Publisher('Routing/Map', MarkerArray, queue_size=10)
         self.path_pub = rospy.Publisher('Routing/Path', Path, queue_size=10)
         
     def setup_subscriber(self):
@@ -94,8 +86,3 @@ class Routing:
         
         self.path_pub.publish(path_msg)
         
-    def publish_map(self):
-        if self.map_message is None:
-            self.map_message = map_to_markerarray(self.lanelet_map)
-        self.map_pub.publish(self.map_message)
-
