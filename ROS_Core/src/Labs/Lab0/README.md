@@ -1,20 +1,20 @@
 # Lab 0 - Introduction to ROS and Mini Truck
 
 ## Overview & Goals
-1. Get familar with the hardware of the truck:
+1. Get familiar with the hardware of the truck:
     - Turn the truck on and off.
-    - Remote control the truck.
+    - Remote control of the truck.
     - Replace the battery.
-2. Get familar with the software interface of the truck:
+2. Get familiar with the software interface of the truck:
     - Connect to the truck via SSH.
     - Run the SLAM and controller nodes.
     - Play around with RViz visualization and the QRT control panel.
-4. Learn basic ROS sub/pub:
-    - Subscribe to Odometry topic and publish control command.
-5. Learn ROS parameter server:
-    - Set the parameters from launch file and command line.
+3. Learn basic ROS sub/pub:
+    - Subscribe to the Odometry topic and publish the control command.
+4. Learn ROS parameter server:
+    - Set the parameters from the launch file and command line.
     - Set the parameters from yaml file.
-6. Write a simple P throttle controller and pure pursuit steering controller to reach a goal.
+5. Write a simple P throttle controller and pure pursuit steering controller to reach a goal.
 
 ## Get Started
 1. Build the workspace from [`ROS_Core`](/ROS_Core).
