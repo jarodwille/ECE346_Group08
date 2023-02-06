@@ -14,7 +14,7 @@
 5. Learn ROS parameter server:
     - Set the parameters from launch file and command line.
     - Set the parameters from yaml file.
-6. Write a simple P controller to reach a goal.
+6. Write a simple P throttle controller and pure pursuit steering controller to reach a goal.
 
 ## Get Started
 1. Build the workspace from [`ROS_Core`](/ROS_Core).
