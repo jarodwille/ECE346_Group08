@@ -181,19 +181,21 @@ class PyLaneletMap:
         return:
             reference line:[Nx5], [x,y,left_width,right_width,speed_limit]
         '''
-        center_line = lanelet.get_section_centerline(start_s, end_s, endpoint = endpoint)
+        dl = 0.2
+        num_pt = int(max(2,(end_s - start_s)*lanelet.length / dl))
+        center_line = lanelet.get_section_centerline(start_s, end_s, endpoint = endpoint, num = num_pt)
         
-        cur_width = lanelet.get_section_width(start_s, end_s, endpoint = endpoint)
+        cur_width = lanelet.get_section_width(start_s, end_s, endpoint = endpoint,  num = num_pt)
         left_width = cur_width/2
         right_width = cur_width/2
         
         for left_id in lanelet.left:
             left_lanelet = self.lanelets[left_id]
-            left_width += left_lanelet.get_section_width(start_s, end_s, endpoint = endpoint)
+            left_width += left_lanelet.get_section_width(start_s, end_s, endpoint = endpoint,  num = num_pt)
         
         for right_id in lanelet.right:
             right_lanelet = self.lanelets[right_id]
-            right_width += right_lanelet.get_section_width(start_s, end_s, endpoint = endpoint)
+            right_width += right_lanelet.get_section_width(start_s, end_s, endpoint = endpoint,  num = num_pt)
         
         left_width = left_width[:, np.newaxis]
         right_width = right_width[:, np.newaxis]
