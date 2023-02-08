@@ -150,7 +150,11 @@ class PyLaneletMap:
             self.get_reference(end_lanelet, start_s, end_s, endpoint = True)
             )
         
-        return np.concatenate(centerline_list, axis=0)
+        centerline = np.concatenate(centerline_list, axis=0)
+        # In case of repeated points, pyspline will throw an error
+        _, idx = np.unique(centerline, axis=0, return_index=True)
+        centerline_unique = centerline[np.sort(idx)]
+        return centerline_unique
     
     def plot_map(self):
         plt.figure(figsize=(10, 10))
