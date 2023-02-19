@@ -181,7 +181,7 @@ class PyLaneletMap:
         return:
             reference line:[Nx5], [x,y,left_width,right_width,speed_limit]
         '''
-        dl = 0.2
+        dl = 0.1
         num_pt = int(max(2,(end_s - start_s)*lanelet.length / dl))
         center_line = lanelet.get_section_centerline(start_s, end_s, endpoint = endpoint, num = num_pt)
         
