@@ -197,7 +197,7 @@ class ILQR():
 		
    
 		reg = max(self.reg_min, reg*self.reg_scale_down)
-		print('finish before')
+	
          
          
 		return K_closed_loop, k_open_loop, last_reg
@@ -208,13 +208,20 @@ class ILQR():
         
 		state[:,0] = X_0[:,0]
 		T = self.T
-		print('roll 1')
+		
 		for t in range(T-1):
 			K = K_closed_loop[:,:,t]
 			k = k_open_loop[:,t]
-			control[:,t] = U_0[:,t]+ alpha*k + K @ (state[:, t] - X_0[:, t])
-			print('roll2')
-			state[:,t+1], control[:t] = self.dyn.integrate_forward_np(state, control)
+			error = state[:, t] - X_0[:, t]
+			error[3] = np.arctan2(np.sin(error[3]), np.cos(error[3]))
+			# THETA_INDX = 3
+			# if error[THETA_INDX] < -np.pi:
+			# 	error[THETA_INDX] += 2*np.pi
+			# elif error[THETA_INDX] > np.pi:
+			# 	error[THETA_INDX] -= 2*np.pi
+    
+			control[:,t] = U_0[:,t]+ alpha*k + K @ (error)
+			state[:,t+1], control[:,t] = self.dyn.integrate_forward_np(state[:,t], control[:,t])
 			
 		return state, control
 
@@ -266,9 +273,7 @@ class ILQR():
 			K_closed_loop, k_open_loop, last_reg= self.backward_pass(trajectory, controls, path_refs, obs_refs)
 			changed = False
 			for alpha in self.alphas:
-				print('1')
 				trajectory_new, controls_new = self.roll_out(trajectory, controls, K_closed_loop, k_open_loop, alpha)
-				print('2')
 				path_refs_new, obs_refs_new = self.get_references(trajectory_new)
 				J_new = self.cost.get_traj_cost(trajectory_new, controls_new, path_refs, obs_refs)
 				if J_new<=J:
@@ -280,7 +285,7 @@ class ILQR():
 					changed = True
 					break
 			if not changed:
-				status = "Failed Line Search w reg = " + last_reg
+				status = 1.0
 				break
 			if converged:
 				status = 0
