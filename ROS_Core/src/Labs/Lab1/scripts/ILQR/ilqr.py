@@ -129,7 +129,9 @@ class ILQR():
 		path_refs = self.ref_path.get_reference(trajectory[:2, :])
 		obs_refs = self.collision_checker.check_collisions(trajectory, self.obstacle_list)
 		return path_refs, obs_refs
-    
+
+
+
 	def backward_pass(self, trajectory, controls, path_refs, obs_refs):
 		'''
 		calculate backward pass in iLQR
@@ -152,6 +154,7 @@ class ILQR():
 		t = T-2
         
 		reg_attempt = 0
+		reg = 1.0
 		while t>=0:
 			Q_x = q[:,t] + A[:,:,t].T @ p
 			Q_u = r[:,t] + B[:,:,t].T @ p
@@ -160,7 +163,9 @@ class ILQR():
 			Q_ux = H[:,:,t] + B[:,:,t].T @ P @ A[:,:,t]
 
 			# Add regularization
-			reg_matrix = reg*np.eye(4)
+			reg_matrix = reg*np.eye((B.T.shape)[-1])
+			# print(R.shape)
+			# print((B.T.shape)[-1])
 			Q_uu_reg = R[:,:,t] + B[:,:,t].T @ (P+reg_matrix) @ B[:,:,t]
 			Q_ux_reg = H[:,:,t] + B[:,:,t].T @ (P+reg_matrix) @ A[:,:,t]
 
@@ -173,20 +178,28 @@ class ILQR():
 				reg_attempt += 1
 				continue
 
+
 			Q_uu_reg_inv = np.linalg.inv(Q_uu_reg)
 			# Calculate policy
 			k = -Q_uu_reg_inv@Q_u
 			K = -Q_uu_reg_inv@Q_ux_reg
 			k_open_loop[:,t] = k          
 			K_closed_loop[:, :, t] = K
+			
 
 			# Update value function derivative for the previous time step
 			p = Q_x + K.T @ Q_uu @ k + K.T@Q_u + Q_ux.T@k
 			P = Q_xx + K.T @ Q_uu @ K + K.T@Q_ux + Q_ux.T@K
 			t -= 1
 			last_reg = reg
+	
+
+		
+   
 		reg = max(self.reg_min, reg*self.reg_scale_down)
-        
+		print('finish before')
+         
+         
 		return K_closed_loop, k_open_loop, last_reg
 
 	def roll_out(self, X_0, U_0, K_closed_loop, k_open_loop, alpha):
@@ -195,13 +208,18 @@ class ILQR():
         
 		state[:,0] = X_0[:,0]
 		T = self.T
+		print('roll 1')
 		for t in range(T-1):
 			K = K_closed_loop[:,:,t]
 			k = k_open_loop[:,t]
 			control[:,t] = U_0[:,t]+ alpha*k + K @ (state[:, t] - X_0[:, t])
+			print('roll2')
 			state[:,t+1], control[:t] = self.dyn.integrate_forward_np(state, control)
+			
 		return state, control
-    
+
+
+
 	def plan(self, init_state: np.ndarray,
 				controls: Optional[np.ndarray] = None) -> Dict:
 		'''
@@ -236,18 +254,23 @@ class ILQR():
 		# Rolls out the nominal trajectory and gets the initial cost.
 		trajectory, controls = self.dyn.rollout_nominal_np(init_state, controls)
 
-		# Get path and obstacle references + cost based on current nominal trajectory.
+		# Get path and obstacle references based on your current nominal trajectory.
+		# Note: you will NEED TO call this function and get new references at each iteration.
 		path_refs, obs_refs = self.get_references(trajectory)
+
+		# Get the initial cost of the trajectory.
 		J = self.cost.get_traj_cost(trajectory, controls, path_refs, obs_refs)
-        
+  
 		converged = False
 		for i in range(self.max_iter):
 			K_closed_loop, k_open_loop, last_reg= self.backward_pass(trajectory, controls, path_refs, obs_refs)
 			changed = False
 			for alpha in self.alphas:
+				print('1')
 				trajectory_new, controls_new = self.roll_out(trajectory, controls, K_closed_loop, k_open_loop, alpha)
+				print('2')
 				path_refs_new, obs_refs_new = self.get_references(trajectory_new)
-				J_new, _ = self.cost.get_traj_cost(trajectory_new, controls_new, path_refs, obs_refs)
+				J_new = self.cost.get_traj_cost(trajectory_new, controls_new, path_refs, obs_refs)
 				if J_new<=J:
 					if np.abs(J - J_new) < self.tol:
 						converged = True   
@@ -260,8 +283,9 @@ class ILQR():
 				status = "Failed Line Search w reg = " + last_reg
 				break
 			if converged:
-				status = "Converged"
+				status = 0
 				break
+
 
 		##########################################################################
 		# TODO 1: Implement the ILQR algorithm. Feel free to add any helper functions.
@@ -323,14 +347,15 @@ class ILQR():
         #   H: np.ndarray, (dim_x, dim_u, T) hessian of cost function w.r.t. states and controls
 		
 		########################### #END of TODO 1 #####################################
+
 		t_process = time.time() - t_start
 		solver_info = dict(
 				t_process=t_process, # Time spent on planning
 				trajectory = trajectory,
 				controls = controls,
-				status = status,
-				K_closed_loop = K_closed_loop,
-				k_open_loop = k_open_loop
+				status=status, #	TODO: Fill this in
+				K_closed_loop=K_closed_loop, # TODO: Fill this in
+				k_open_loop=k_open_loop # TODO: Fill this in
 				# Optional TODO: Fill in other information you want to return
 		)
 		return solver_info
