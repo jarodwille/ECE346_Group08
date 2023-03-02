@@ -418,6 +418,9 @@ class TrajectoryPlanner():
             ###############################
             #### TODO: Task 3 #############
             ###############################
+                
+            
+
 
             '''
             Implement the receding horizon planning thread
@@ -441,6 +444,21 @@ class TrajectoryPlanner():
                 - Publish the new policy for RVIZ visualization
                     for example: self.trajectory_pub.publish(new_policy.to_msg())       
             '''
+            
+            if self.plan_state_buffer.new_data_available() is not Empty and t_last_replan > self.replan_dt and bool(self.planner_ready) == 1:
+                curr_state = self.plan_state_buffer.readFromRT()
+                curr_policy = self.policy_buffer.readFromRT()
+                if curr_policy is not Empty:
+                    initial_controls = self.policy.get_ref_control()
+                    
+                if self.path_buffer.new_data_available() is not Empty:
+                    self.planner.update_ref_path()
+                    
+                    
+                    
+                
+                
+                 
             ###############################
             #### END OF TODO #############
             ###############################
