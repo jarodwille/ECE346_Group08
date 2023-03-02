@@ -211,6 +211,9 @@ class TrajectoryPlanner():
         # Implement your control law here using ILQR policy
         # Hint: make sure that the difference in heading is between [-pi, pi]
         
+        # Set correct heading angle 
+        x[3] = np.arctan2(np.sin(x[3]),np.cos(x[3]))
+        
         # Compute local state feedback control policy 
         u = u_ref + K_closed_loop * (x - x_ref)
 
