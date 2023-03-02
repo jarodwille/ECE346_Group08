@@ -211,8 +211,14 @@ class TrajectoryPlanner():
         # Implement your control law here using ILQR policy
         # Hint: make sure that the difference in heading is between [-pi, pi]
         
-        accel = 0 # TO BE REPLACED
-        steer_rate = 0 # TO BE REPLACED
+        # Compute local state feedback control policy 
+        u = u_ref + K_closed_loop * (x - x_ref)
+
+        # Grab the acceleration component of the local state feedback control policy
+        accel = u[0]
+
+        # Grab the steering rate component of the local state feedback control policy
+        steer_rate = u[1]
 
         ##### END OF TODO ##############
 
