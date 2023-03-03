@@ -424,8 +424,6 @@ class TrajectoryPlanner():
             ###############################
             #### TODO: Task 3 #############
             ###############################
-                
-            
 
 
             '''
@@ -451,14 +449,66 @@ class TrajectoryPlanner():
                     for example: self.trajectory_pub.publish(new_policy.to_msg())       
             '''
             
-            if self.plan_state_buffer.new_data_available() is not Empty and t_last_replan > self.replan_dt and bool(self.planner_ready) == 1:
-                curr_state = self.plan_state_buffer.readFromRT()
-                curr_policy = self.policy_buffer.readFromRT()
-                if curr_policy is not Empty:
-                    initial_controls = self.policy.get_ref_control()
+            if self.plan_state_buffer.new_data_available and t_last_replan > self.replan_dt and self.planner_ready:
+                
+                
+                state = self.plan_state_buffer.readFromRT()[:,-1]
+                
+                existing_policy = self.policy_buffer.readFromRT()
+                if existing_policy is not None:
+                    initial_control = Policy.get_ref_controls()
                     
-                if self.path_buffer.new_data_available() is not Empty:
-                    self.planner.update_ref_path()
+                
+                    
+                if self.path_buffer.new_data_available:
+                    new_path = self.path_buffer.readFromRT()
+                    self.planner.update_ref_path(new_path)
+                    
+                
+                prev_progress = -np.inf
+                _, _, progress = new_path.get_closest_pts(state[:2])
+                progress = progress[0]
+                
+                nominal_trajectory = []
+                nominal_controls = []
+                K_closed_loop = []
+                
+                # stop when the progress is not increasing
+                while (progress - prev_progress)*new_path.length > 1e-3: # stop when the progress is not increasing
+                    nominal_trajectory.append(state)
+                    new_plan = self.planner.plan(state, None, verbose=False)
+                    nominal_controls.append(new_plan['controls'][:,0])
+                    K_closed_loop.append(new_plan['K_closed_loop'][:,:,0])
+                    
+                    # get the next state and its progress
+                    state = new_plan['trajectory'][:,1]
+                    prev_progress = progress
+                    _, _, progress = new_path.get_closest_pts(state[:2])
+                    progress = progress[0]
+                    print('Planning progress %.4f' % progress, end='\r')
+
+                nominal_trajectory = np.array(nominal_trajectory).T # (dim_x, N)
+                nominal_controls = np.array(nominal_controls).T # (dim_u, N)
+                K_closed_loop = np.transpose(np.array(K_closed_loop), (1,2,0)) # (dim_u, dim_x, N)
+                
+                T = nominal_trajectory.shape[-1] # number of time steps
+                t0 = rospy.get_rostime().to_sec()
+            
+                # If stop planning is called, we will not write to the buffer
+                new_policy = Policy(X = nominal_trajectory, 
+                                    U = nominal_controls,
+                                    K = K_closed_loop, 
+                                    t0 = t0, 
+                                    dt = self.planner.dt,
+                                    T = T)
+                
+                self.policy_buffer.writeFromNonRT(new_policy)
+                
+                rospy.loginfo('Finish planning a new policy...')
+                
+                # publish the new policy for RVIZ visualization
+                self.trajectory_pub.publish(new_policy.to_msg()) 
+                    
                     
                     
                     

@@ -154,7 +154,7 @@ class ILQR():
 		t = T-2
         
 		reg_attempt = 0
-		reg = 1.0
+		reg = self.reg_init
 		while t>=0:
 			Q_x = q[:,t] + A[:,:,t].T @ p
 			Q_u = r[:,t] + B[:,:,t].T @ p
