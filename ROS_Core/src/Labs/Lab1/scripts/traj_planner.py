@@ -437,11 +437,11 @@ class TrajectoryPlanner():
             1. Determine if we need to replan by
                 - checking if there is new data in the plan_state_buffer using 
                     <self.plan_state_buffer.new_data_available>
-                - checking if the time since <t_last_replan> is larger than <self.replan_dt>
+                - checking if the time difference of current time with <t_last_replan> is larger than <self.replan_dt>
                 - checking if <self.planner_ready> is True
             2. If we need to replan, 
                 - Get the current state from the plan_state_buffer using <self.plan_state_buffer.readFromRT>
-                - Get the previous policy from the policy_buffer using <self.policy_buffer.readFromRT>
+                - Get the previous policy from the ponew_pathlicy_buffer using <self.policy_buffer.readFromRT>
                 - Get the initial controls for hot start if there is a previous policy
                     you can use helper function <get_ref_controls> in the <Policy> class
                 - Check if there is a new path in the path_buffer using <self.path_buffer.new_data_available>.
@@ -453,67 +453,57 @@ class TrajectoryPlanner():
                 - Publish the new policy for RVIZ visualization
                     for example: self.trajectory_pub.publish(new_policy.to_msg())       
             '''
-            if self.plan_state_buffer.new_data_available and t_last_replan > self.replan_dt and self.planner_ready:
+            
+            #Check if we need to replan
+            if self.plan_state_buffer.new_data_available and self.planner_ready:
                 
+                # Get current state from plan_state_buffer 
+                state = self.plan_state_buffer.readFromRT()
                 
-                state = self.plan_state_buffer.readFromRT()[:,-1]
+                cur_time = state[-1]
+                dt = cur_time - t_last_replan
+                if dt<self.replan_dt:
+                    continue
                 
+                # Get previous policy from policy_buffer
                 existing_policy = self.policy_buffer.readFromRT()
+                
+                # Get initial controls if there is a previous policy 
                 if existing_policy is not None:
-                    initial_control = Policy.get_ref_controls()    #### not sure what's this one is doing
+                    initial_control = existing_policy.get_ref_controls(cur_time) 
+                else:
+                    initial_control = None
                     
-                
-                    
+                # Check if there is a new path in the path_buffer    
                 if self.path_buffer.new_data_available:
+                    # Define new path
                     new_path = self.path_buffer.readFromRT()
+                     # Update the reference path in ILQR 
                     self.planner.update_ref_path(new_path)
+                    print("Update new path")
                     
+                new_plan = self.planner.plan(state[:-1], initial_control)
                 
-                prev_progress = -np.inf
-                _, _, progress = new_path.get_closest_pts(state[:2])
-                progress = progress[0]
-                
-                nominal_trajectory = []
-                nominal_controls = []
-                K_closed_loop = []
-                
-                # stop when the progress is not increasing
-                while (progress - prev_progress)*new_path.length > 1e-3: # stop when the progress is not increasing
-                    nominal_trajectory.append(state)
-                    new_plan = self.planner.plan(state, None, verbose=False)
-                    nominal_controls.append(new_plan['controls'][:,0])
-                    K_closed_loop.append(new_plan['K_closed_loop'][:,:,0])
-                    
-                    # get the next state and its progress
-                    state = new_plan['trajectory'][:,1]
-                    prev_progress = progress
-                    _, _, progress = new_path.get_closest_pts(state[:2])
-                    progress = progress[0]
-                    print('Planning progress %.4f' % progress, end='\r')
-
-                nominal_trajectory = np.array(nominal_trajectory).T # (dim_x, N)
-                nominal_controls = np.array(nominal_controls).T # (dim_u, N)
-                K_closed_loop = np.transpose(np.array(K_closed_loop), (1,2,0)) # (dim_u, dim_x, N)
-                
-                T = nominal_trajectory.shape[-1] # number of time steps
-                t0 = rospy.get_rostime().to_sec()
+                if new_plan['status'] == -1:
+                    continue
             
                 # If stop planning is called, we will not write to the buffer
-                new_policy = Policy(X = nominal_trajectory, 
-                                    U = nominal_controls,
-                                    K = K_closed_loop, 
-                                    t0 = t0, 
+                # Create new policy using new plan 
+                new_policy = Policy(X = new_plan['trajectory'], 
+                                    U = new_plan['controls'],
+                                    K = new_plan['K_closed_loop'], 
+                                    t0 = cur_time, 
                                     dt = self.planner.dt,
-                                    T = T)
+                                    T = self.planner.T)
                 
+                # Write new policy to the policy buffer 
                 self.policy_buffer.writeFromNonRT(new_policy)
-                
                 rospy.loginfo('Finish planning a new policy...')
                 
                 # publish the new policy for RVIZ visualization
                 self.trajectory_pub.publish(new_policy.to_msg()) 
                 
-            t_last_replan = t0
+                t_last_replan = cur_time
                     
                     
                     
@@ -524,4 +514,3 @@ class TrajectoryPlanner():
             ###############################
             #### END OF TODO #############
             ###############################
-            time.sleep(0.01)
