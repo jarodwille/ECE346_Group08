@@ -451,7 +451,6 @@ class TrajectoryPlanner():
                 - Publish the new policy for RVIZ visualization
                     for example: self.trajectory_pub.publish(new_policy.to_msg())       
             '''
-            
             if self.plan_state_buffer.new_data_available and t_last_replan > self.replan_dt and self.planner_ready:
                 
                 
@@ -459,7 +458,7 @@ class TrajectoryPlanner():
                 
                 existing_policy = self.policy_buffer.readFromRT()
                 if existing_policy is not None:
-                    initial_control = Policy.get_ref_controls()
+                    initial_control = Policy.get_ref_controls()    #### not sure what's this one is doing
                     
                 
                     
@@ -511,6 +510,8 @@ class TrajectoryPlanner():
                 
                 # publish the new policy for RVIZ visualization
                 self.trajectory_pub.publish(new_policy.to_msg()) 
+                
+            t_last_replan = t0
                     
                     
                     
