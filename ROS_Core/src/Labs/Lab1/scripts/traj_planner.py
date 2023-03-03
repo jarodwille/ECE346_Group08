@@ -212,11 +212,13 @@ class TrajectoryPlanner():
         # Hint: make sure that the difference in heading is between [-pi, pi]
         
         # Set correct heading angle 
-        x[3] = np.arctan2(np.sin(x[3]),np.cos(x[3]))
+        dx = x- x_ref
+        dx[3] = np.arctan2(np.sin(dx[3]),np.cos(dx[3]))
         
-        # Compute local state feedback control policy 
-        u = u_ref + K_closed_loop * (x - x_ref)
-
+        # Compute local state feedback control policy
+        
+        u = u_ref + K_closed_loop@dx
+        
         # Grab the acceleration component of the local state feedback control policy
         accel = u[0]
 
@@ -382,7 +384,7 @@ class TrajectoryPlanner():
                 # stop when the progress is not increasing
                 while (progress - prev_progress)*new_path.length > 1e-3: # stop when the progress is not increasing
                     nominal_trajectory.append(state)
-                    new_plan = self.planner.plan(state, None, verbose=False)
+                    new_plan = self.planner.plan(state, None)
                     nominal_controls.append(new_plan['controls'][:,0])
                     K_closed_loop.append(new_plan['K_closed_loop'][:,:,0])
                     
