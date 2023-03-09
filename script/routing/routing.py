@@ -42,13 +42,24 @@ class Routing:
         self.path_pub = rospy.Publisher('Routing/Path', Path, queue_size=10)
         
     def setup_subscriber(self):
-        pose_sub = message_filters.Subscriber(self.odom_topic, Odometry)
+        self.odom_msg = None
+        pose_sub = rospy.Subscriber(self.odom_topic, Odometry, self.odom_callback, queue_size=1)
         # This subscribe to the 2D Nav Goal in RVIZ
-        goal_sub = message_filters.Subscriber('/move_base_simple/goal', PoseStamped)
-        self.replan_callback = message_filters.ApproximateTimeSynchronizer([pose_sub, goal_sub], 10, 0.1)
-        self.replan_callback.registerCallback(self.replan)
+        goal_sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.replan, queue_size=1)
+        # self.replan_callback = message_filters.ApproximateTimeSynchronizer([pose_sub, goal_sub], 10, 0.1)
+        # self.replan_callback.registerCallback(self.replan)
+
+
+    def odom_callback(self, odom_msg):
+        self.odom_msg = odom_msg
         
-    def replan(self, odom_msg, goal_msg):
+        
+    def replan(self, goal_msg):
+        if self.odom_msg is None:
+            return
+        else:
+            odom_msg = self.odom_msg
+            
         start_x = odom_msg.pose.pose.position.x
         start_y = odom_msg.pose.pose.position.y
         
