@@ -2,6 +2,7 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 from .lanelet import PyLaneLet
+import random
 
 class PyLaneletMap:
     def __init__(self) -> None:
@@ -88,7 +89,7 @@ class PyLaneletMap:
         
         return route, route_length
     
-    def get_shortest_path(self, start, end, start_pose: bool = False, end_pose: bool = False):
+    def get_shortest_path(self, start, end, start_pose: bool = False, end_pose: bool = False, verbose: bool = True):
         '''
         Get the shortest path from start to end
         '''
@@ -106,7 +107,8 @@ class PyLaneletMap:
                 or end_lanelet.id in start_lanelet.left \
                 or end_lanelet.id in start_lanelet.right):
             if abs(start_s - end_s)*start_lanelet.length < 0.1:
-                print("Start and end points are too close")
+                if verbose:
+                    print("Start and end points are too close")
                 return None
             if end_s < start_s:
                 centerline_list.append(
@@ -152,8 +154,8 @@ class PyLaneletMap:
         
         centerline = np.concatenate(centerline_list, axis=0)
         # In case of repeated points, pyspline will throw an error
-        _, idx = np.unique(centerline, axis=0, return_index=True)
-        centerline_unique = centerline[np.sort(idx)]
+        _, idx = np.unique(np.round(centerline[:,:2], 3), axis=0, return_index=True)
+        centerline_unique = centerline[np.sort(idx), :]
         return centerline_unique
     
     def plot_map(self):
@@ -203,3 +205,18 @@ class PyLaneletMap:
         
         reference = np.concatenate([center_line, left_width, right_width, speed_limit], axis=1)
         return reference
+    
+    def get_random_waypoint(self):
+        '''
+        Randomly select a (valid) waypoint on the map
+        Return:
+            waypoint: [x,y,psi]
+        '''
+        
+        # Randomly select a lanelet
+        lanelet_id = random.choice(list(self.lanelets.keys()))
+        terminal_lanelet = self.lanelets[lanelet_id]
+        s = np.random.uniform(0,1)
+        
+        return terminal_lanelet.center_line.get_ref_pose(s)
+        

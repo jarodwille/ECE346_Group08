@@ -49,10 +49,8 @@ class Routing:
         # self.replan_callback = message_filters.ApproximateTimeSynchronizer([pose_sub, goal_sub], 10, 0.1)
         # self.replan_callback.registerCallback(self.replan)
 
-
     def odom_callback(self, odom_msg):
         self.odom_msg = odom_msg
-        
         
     def replan(self, goal_msg):
         if self.odom_msg is None:
@@ -97,3 +95,4 @@ class Routing:
         
         self.path_pub.publish(path_msg)
         
+

@@ -1,0 +1,11 @@
+float32 x_start
+float32 y_start
+float32 psi_start
+
+float32 x_goal
+float32 y_goal
+float32 psi_goal
+
+bool random_goal
+---
+bool success

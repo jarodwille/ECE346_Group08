@@ -55,3 +55,15 @@ class PyLineString:
         point = point.astype(float)
         _, d = self.spline.projectPoint(point)
         return np.sqrt(d[0]**2 + d[1]**2)
+    
+    def get_ref_pose(self, s):
+        '''
+        Get reference pose (x,y,theta) at normalized position s
+        :param s: normalized position [0,1]
+        :return: reference pose (x,y,theta)
+        '''
+        
+        x, y = self.spline.getValue(s)
+        deri = self.spline.getDerivative(s)
+        theta = np.arctan2(deri[1], deri[0])
+        return np.array([x, y, theta])
