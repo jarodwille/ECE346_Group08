@@ -206,7 +206,7 @@ class PyLaneletMap:
         reference = np.concatenate([center_line, left_width, right_width, speed_limit], axis=1)
         return reference
     
-    def get_random_waypoint(self):
+    def get_random_waypoint(self, with_neighbors: bool = False):
         '''
         Randomly select a (valid) waypoint on the map
         Return:
@@ -214,7 +214,15 @@ class PyLaneletMap:
         '''
         
         # Randomly select a lanelet
-        lanelet_id = random.choice(list(self.lanelets.keys()))
+        if with_neighbors:
+            has_neighbor = False
+            while has_neighbor == False:
+                lanelet_id = random.choice(list(self.lanelets.keys()))
+                lanelet = self.lanelets[lanelet_id]
+                if len(lanelet.left) > 0 or len(lanelet.right) > 0:
+                    has_neighbor = True
+        else:
+            lanelet_id = random.choice(list(self.lanelets.keys()))
         terminal_lanelet = self.lanelets[lanelet_id]
         s = np.random.uniform(0,1)
         
