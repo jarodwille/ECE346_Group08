@@ -221,10 +221,12 @@ class PyLaneletMap:
                 lanelet = self.lanelets[lanelet_id]
                 if len(lanelet.left) > 0 or len(lanelet.right) > 0:
                     has_neighbor = True
+                s = np.random.uniform(0.1,0.9)
         else:
             lanelet_id = random.choice(list(self.lanelets.keys()))
+            s = np.random.uniform(0,1)
         terminal_lanelet = self.lanelets[lanelet_id]
-        s = np.random.uniform(0,1)
+       
         
         return terminal_lanelet.center_line.get_ref_pose(s)
         
