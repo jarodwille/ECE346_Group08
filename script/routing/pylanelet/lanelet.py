@@ -157,14 +157,15 @@ class PyLaneLet:
             point: (2,) array
         Returns:
             distance: float
+            s: normalized position on the center line
         '''
         # This d is (curve(s) - point)
         s, d = self.center_line.spline.projectPoint(point)
         
-        sampled_pt = self.center_line.spline.getValue(s)
+        # sampled_pt = self.center_line.spline.getValue(s)
         deri = self.center_line.spline.getDerivative(s)
         slope = np.arctan2(deri[1], deri[0]) # [N,]
-        return -np.sin(slope) * d[0] + np.cos(slope) * d[1]
+        return -np.sin(slope) * d[0] + np.cos(slope) * d[1], s
         
     
         
