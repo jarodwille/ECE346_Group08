@@ -2,7 +2,9 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 from .lanelet import PyLaneLet
+from functools import lru_cache
 import random
+from pyspline import Curve
 
 class PyLaneletMap:
     def __init__(self) -> None:
@@ -11,13 +13,11 @@ class PyLaneletMap:
         self.graph_initialized = False
         self.psi_weight = 1 # weight for heading difference in cost function
         
-        
     def add_lanelet(self, lanelet: PyLaneLet):
         self.lanelets[lanelet.id] = lanelet
         
     def get_lanelet(self, lanelet_id: int) -> PyLaneLet:
         return self.lanelets[lanelet_id]
-    
     
     def get_closest_lanelet(self, pose, check_psi: bool=False) -> PyLaneLet:
         '''
@@ -77,7 +77,7 @@ class PyLaneletMap:
                 self.routing_graph.add_edge(cur_id, successor_id, weight=lanelet.length)
         
         self.graph_initialized = True
-            
+
     def get_shortest_route(self, start_id: int, end_id: int):
         '''
         Get the shortest route from start_id to end_id
@@ -158,6 +158,44 @@ class PyLaneletMap:
         centerline_unique = centerline[np.sort(idx), :]
         return centerline_unique
     
+    def get_route_centerline(self, route, start_s, end_s=1):
+        '''
+        Given a route, return the centerline of the route
+        
+        '''
+        centerline_list = []
+        num_lanelets = len(route)
+        for i in range(num_lanelets-1):
+            cur_lanelet = self.lanelets[route[i]]
+            next_lanelet_id = route[i+1]
+            # check if we need to change lane
+            if next_lanelet_id in cur_lanelet.left or next_lanelet_id in cur_lanelet.right:
+                if i == num_lanelets-2:
+                    # change lane to the last lanelet
+                    cur_end = (end_s-start_s)*0.3 + start_s
+                    next_start = (end_s - start_s)*0.7 + start_s
+                else:
+                    cur_end = (1-start_s)*0.3 + start_s
+                    next_start = (1 - start_s)*0.7 + start_s
+            else:
+                cur_end = 1
+                next_start = 0
+            centerline_list.append(
+                self.get_reference(cur_lanelet, start_s, cur_end, endpoint = False)
+                )
+            start_s = next_start
+
+        end_lanelet = self.lanelets[route[-1]]
+        centerline_list.append(
+            self.get_reference(end_lanelet, start_s, end_s, endpoint = True)
+            )
+        
+        centerline = np.concatenate(centerline_list, axis=0)
+        # In case of repeated points, pyspline will throw an error
+        _, idx = np.unique(np.round(centerline[:,:2], 3), axis=0, return_index=True)
+        centerline_unique = centerline[np.sort(idx), :]
+        return centerline_unique
+        
     def plot_map(self):
         plt.figure(figsize=(10, 10))
         plotted_linestring = []
@@ -226,7 +264,57 @@ class PyLaneletMap:
             lanelet_id = random.choice(list(self.lanelets.keys()))
             s = np.random.uniform(0,1)
         terminal_lanelet = self.lanelets[lanelet_id]
-       
         
         return terminal_lanelet.center_line.get_ref_pose(s)
+    
+    def get_reachable_path(self, start_id, start_s, d_max, allow_lane_change=True):
+        '''
+        Get the closest lanelet to the given pose
+        Parameters:
+            pose: array, [x, y, (optional) psi]
+            d_max: the maximum distance to search
+            allow_lane_change: whether to allow lane change
+        Return:
+            a list of pyspline Curve
+        '''
         
+        # apply the memoization
+        @lru_cache(maxsize=None)
+        def all_paths_to_target(cur_id, d_prev, lane_change):
+            results = []
+            # check lane change
+            if lane_change and allow_lane_change: # do this to avoid repeated lane change
+                for left_id in self.lanelets[cur_id].left:
+                    for path in all_paths_to_target(left_id, d_prev + 0.5, False):
+                        results.append([cur_id] + path)   
+                for right_id in self.lanelets[cur_id].right:
+                    for path in all_paths_to_target(right_id, d_prev + 0.5, False):
+                        results.append([cur_id] + path)
+
+            cur_lanelet = self.lanelets[cur_id]
+            d_cur = d_prev + cur_lanelet.length
+            if d_cur >= d_max:
+                results.append([cur_id])
+                return results
+
+            for successor_id in self.lanelets[cur_id].successor:
+                for path in all_paths_to_target(successor_id, d_cur, allow_lane_change):
+                    results.append([cur_id] + path)
+            
+            return results
+        
+        # get the closest lanelet
+        start_lanelet = self.lanelets[start_id]
+        reachable_routes = all_paths_to_target(start_id,
+                                            -1*start_s*start_lanelet.length,
+                                            allow_lane_change)
+        
+        # get the centerline of all reachable path
+        centerline_list = []
+        for route in reachable_routes:
+            centerline = self.get_route_centerline(route, start_s)
+            route_curve = Curve(x=centerline[:,0], y=centerline[:,1], k=3)
+            centerline_list.append(route_curve)
+            
+        return centerline_list
+

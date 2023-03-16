@@ -43,7 +43,6 @@ class PyLaneLet:
         
         return np.linalg.norm(left_vertices - right_vertices, axis=1)
     
-        
     def get_section_vertices(self, start: float, end: float, endpoint: bool=False, num: int = 100):
         '''
         Get vertices of the lanelet section between start and end
@@ -151,8 +150,23 @@ class PyLaneLet:
         '''
         return lanelet_id in self.right
     
+    def distance_to_centerline(self, point: np.ndarray):
+        '''
+        Get distance from the given point to the center line
+        Parameters:
+            point: (2,) array
+        Returns:
+            distance: float
+        '''
+        # This d is (curve(s) - point)
+        s, d = self.center_line.spline.projectPoint(point)
         
+        sampled_pt = self.center_line.spline.getValue(s)
+        deri = self.center_line.spline.getDerivative(s)
+        slope = np.arctan2(deri[1], deri[0]) # [N,]
+        return -np.sin(slope) * d[0] + np.cos(slope) * d[1]
         
+    
         
         
         
