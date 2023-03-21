@@ -5,6 +5,7 @@ import rospy
 import numpy as np
 import os
 import time
+import queue
 
 from utils import RealtimeBuffer, get_ros_param, Policy, GeneratePwm
 from ILQR import RefPath
@@ -18,7 +19,12 @@ from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path as PathMsg # used to display the trajectory on RVIZ
 from std_srvs.srv import Empty, EmptyResponse
-import queue
+
+# You will use those for lab2   
+from racecar_msgs.msg import OdometryArray
+from utils import frs_to_obstacle, frs_to_msg, get_obstacle_vertices, get_ros_param
+from visualization_msgs.msg import MarkerArray
+from racecar_obs_detection.srv import GetFRS, GetFRSResponse
 
 class TrajectoryPlanner():
     '''
@@ -262,9 +268,12 @@ class TrajectoryPlanner():
             policy = self.policy_buffer.readFromRT()
             
             # take the latency of publish into the account
-            self.update_lock.acquire()
-            t_act = rospy.get_rostime().to_sec() + self.latency 
-            self.update_lock.release()
+            if self.simulation:
+                t_act = rospy.get_rostime().to_sec()
+            else:
+                self.update_lock.acquire()
+                t_act = rospy.get_rostime().to_sec() + self.latency 
+                self.update_lock.release()
             
             # check if there is new state available
             if self.control_state_buffer.new_data_available:
@@ -429,7 +438,6 @@ class TrajectoryPlanner():
             ###############################
             #### TODO: Task 3 #############
             ###############################
-
 
             '''
             Implement the receding horizon planning thread
