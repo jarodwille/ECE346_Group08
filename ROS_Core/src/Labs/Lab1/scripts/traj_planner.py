@@ -70,6 +70,7 @@ class TrajectoryPlanner():
         self.odom_topic = get_ros_param('~odom_topic', '/slam_pose')
         self.path_topic = get_ros_param('~path_topic', '/Routing/Path')
         self.obstacle_topic = get_ros_param('~obstacle_topic', '/prediction/obstacles')
+        self.static_topic = get_ros_param('~static_obs_tpoic', '/Obstacles/Static') ## newly added
         
         # Read ROS topic names to publish
         self.control_topic = get_ros_param('~control_topic', '/control/servo_control')
@@ -125,7 +126,7 @@ class TrajectoryPlanner():
         '''
         self.pose_sub = rospy.Subscriber(self.odom_topic, Odometry, self.odometry_callback, queue_size=10)
         self.path_sub = rospy.Subscriber(self.path_topic, PathMsg, self.path_callback, queue_size=10)
-
+        self.static_obs_sub = rospy.Subscriber(self.static_topic, MarkerArray, self.static_obs_callback, queue_size=10) ### newly added for stattic dynamics
     def setup_service(self):
         '''
         Set up ros service
@@ -170,6 +171,14 @@ class TrajectoryPlanner():
         # Then it will be processed and add to the planner buffer 
         # inside the controller thread
         self.control_state_buffer.writeFromNonRT(odom_msg)
+        
+    def static_obs_callbacl(self, statix_obs_msg):
+        
+        '''
+        Subscriber callback function of the static obstacles  
+        '''
+        
+        
     
     def path_callback(self, path_msg):
         x = []
