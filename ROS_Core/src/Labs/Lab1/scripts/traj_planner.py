@@ -189,30 +189,18 @@ class TrajectoryPlanner():
         # Then it will be processed and add to the planner buffer
         # inside the controller thread
         self.control_state_buffer.writeFromNonRT(odom_msg)
-        
-        
+
     def static_obs_callback(self, static_obs_msg):
-        
         '''
         Subscriber callback function of the static obstacles 
 
         '''
-        
+        TrajectoryPlanner = dict()
         vertices_list = []
         for vertices in static_obs_msg:
-            vertices_list.append(static_obs_msg.get_obstacle_vertices)
-            
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-    
+            obs_id, vertices = static_obs_msg.get_obstacle_vertices
+            TrajectoryPlanner.static_obstacle_dict[obs_id] = vertices
+
     def path_callback(self, path_msg):
         x = []
         y = []
@@ -484,10 +472,13 @@ class TrajectoryPlanner():
         This function is the main thread for receding horizon planning
         We repeatedly call ILQR to replan the trajectory (policy) once the new state is available
         '''
+        # initialize obstacles list
+        obstacles_list = []
 
         rospy.loginfo(
             'Receding Horizon Planning thread started waiting for ROS service calls...')
         t_last_replan = 0
+
         while not rospy.is_shutdown():
             ###############################
             #### TODO: Task 3 #############
@@ -518,6 +509,12 @@ class TrajectoryPlanner():
 
             # Check if we need to replan
             if self.plan_state_buffer.new_data_available and self.planner_ready:
+
+                # append vertices
+                for vertex in TrajectoryPlanner.static_obstacle_dict.values():
+                    obstacles_list.append(vertex)
+
+                self.planner.update_obstacles(obstacles_list)
 
                 # Get current state from plan_state_buffer
                 state = self.plan_state_buffer.readFromRT()
