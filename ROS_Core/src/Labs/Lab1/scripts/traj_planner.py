@@ -172,11 +172,21 @@ class TrajectoryPlanner():
         # inside the controller thread
         self.control_state_buffer.writeFromNonRT(odom_msg)
         
-    def static_obs_callbacl(self, statix_obs_msg):
+    class static_obs:
+        static_obstacle = dict()
+        
+    def static_obs_callback(self, statix_obs_msg):
         
         '''
-        Subscriber callback function of the static obstacles  
+        Subscriber callback function of the static obstacles 
+         
         '''
+        
+        
+        
+        
+        
+        
         
         
     
