@@ -30,6 +30,8 @@ class TrajectoryPlanner():
     '''
     Main class for the Receding Horizon trajectory planner
     '''
+    
+    static_obstacle_dict = dict()
 
     def __init__(self):
         # Indicate if the planner is used to generate a new trajectory
@@ -172,15 +174,20 @@ class TrajectoryPlanner():
         # inside the controller thread
         self.control_state_buffer.writeFromNonRT(odom_msg)
         
-    class static_obs:
-        static_obstacle = dict()
         
-    def static_obs_callback(self, statix_obs_msg):
+    def static_obs_callback(self, static_obs_msg):
         
         '''
         Subscriber callback function of the static obstacles 
          
         '''
+        
+        vertices_list = []
+        for vertices in static_obs_msg:
+            vertices_list.append(static_obs_msg.get_obstacle_vertices)
+            
+        
+        
         
         
         
