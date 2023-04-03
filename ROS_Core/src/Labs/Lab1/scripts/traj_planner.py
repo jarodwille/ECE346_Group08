@@ -76,8 +76,8 @@ class TrajectoryPlanner():
         self.path_topic = get_ros_param('~path_topic', '/Routing/Path')
         self.obstacle_topic = get_ros_param(
             '~obstacle_topic', '/prediction/obstacles')
-        self.static_topic = get_ros_param(
-            '~static_obs_topic', '/Obstacles/Static')  # newly added
+        self.static_obs_topic = get_ros_param(
+            '~static_obs_topic', '/Obstacles/Static')  # newly addedls
 
         # Read ROS topic names to publish
         self.control_topic = get_ros_param(
@@ -140,7 +140,7 @@ class TrajectoryPlanner():
         self.path_sub = rospy.Subscriber(
             self.path_topic, PathMsg, self.path_callback, queue_size=10)
         self.static_obs_sub = rospy.Subscriber(
-            self.static_topic, MarkerArray, self.static_obs_callback, queue_size=10)  # newly added for stattic dynamics
+            self.static_obs_topic, MarkerArray, self.static_obs_callback, queue_size=10)  # newly added for stattic dynamics
 
     def setup_service(self):
         '''
@@ -195,10 +195,8 @@ class TrajectoryPlanner():
         Subscriber callback function of the static obstacles 
 
         '''
-        TrajectoryPlanner = dict()
-        vertices_list = []
-        for vertices in static_obs_msg:
-            obs_id, vertices = static_obs_msg.get_obstacle_vertices
+        for obs in static_obs_msg:
+            obs_id, vertices = obs.get_obstacle_vertices
             TrajectoryPlanner.static_obstacle_dict[obs_id] = vertices
 
     def path_callback(self, path_msg):
