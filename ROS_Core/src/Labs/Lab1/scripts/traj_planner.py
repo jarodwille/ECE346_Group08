@@ -196,7 +196,6 @@ class TrajectoryPlanner():
 
         '''
         TrajectoryPlanner = dict()
-        vertices_list = []
         for vertices in static_obs_msg:
             obs_id, vertices = static_obs_msg.get_obstacle_vertices
             TrajectoryPlanner.static_obstacle_dict[obs_id] = vertices
@@ -513,7 +512,8 @@ class TrajectoryPlanner():
                 # append vertices
                 for vertex in TrajectoryPlanner.static_obstacle_dict.values():
                     obstacles_list.append(vertex)
-
+                    
+                # pass obsticales into ILQR planner
                 self.planner.update_obstacles(obstacles_list)
 
                 # Get current state from plan_state_buffer
