@@ -195,6 +195,7 @@ class TrajectoryPlanner():
         Subscriber callback function of the static obstacles 
 
         '''
+        TrajectoryPlanner.static_obstacle_dict = dict()
         for obs in static_obs_msg:
             obs_id, vertices = obs.get_obstacle_vertices
             TrajectoryPlanner.static_obstacle_dict[obs_id] = vertices
