@@ -11,7 +11,8 @@ try:
     from lanelet2.projection import LocalCartesianProjector
     from lanelet2.geometry import to2D, toArcCoordinates, fromArcCoordinates, ArcCoordinates
 except ImportError:
-    print("Lanelet2 is not installed.")
+    pass
+    # print("Lanelet2 is not installed.")
     
     
 class Lanelet2Converter:
