@@ -54,6 +54,9 @@ class TrajectoryPlanner():
 
         self.setup_service()
 
+        rospy.loginfo("BEFORE")
+        self.frs_client = self.get_frs_client()
+        rospy.loginfo("AFETER!!!!!")
         # start planning and control thread
         threading.Thread(target=self.control_thread).start()
         if not self.receding_horizon:
@@ -61,6 +64,15 @@ class TrajectoryPlanner():
         else:
             threading.Thread(
                 target=self.receding_horizon_planning_thread).start()
+
+    def get_frs_client(self):
+        print("BEFORE WAITING")
+        rospy.wait_for_service('/obstacles/get_frs')
+        print("after WAITING!!!")
+        try:
+            return rospy.ServiceProxy('/obstacles/get_frs', GetFRS)
+        except rospy.ServiceException as e:
+            print("Service call failed: %s" % e)
 
     def read_parameters(self):
         '''
@@ -80,7 +92,8 @@ class TrajectoryPlanner():
             '~control_topic', '/control/servo_control')
         self.traj_topic = get_ros_param('~traj_topic', '/Planning/Trajectory')
         self.static_obs_topic = get_ros_param(
-            '~static_obs_topic', '/Obstacles/Static')  # newly addedls
+            '~static_obs_topic', '/Obstacles/Static')  # newly added
+        self.frs_topic = get_ros_param('~frs_topic', '/vis/FRS')
 
         # Read the simulation flag,
         # if the flag is true, we are in simulation
@@ -127,6 +140,10 @@ class TrajectoryPlanner():
         # Publisher for the control command
         self.control_pub = rospy.Publisher(
             self.control_topic, ServoMsg, queue_size=1)
+
+        # FRS Publisher
+        self.frs_pub = rospy.Publisher(
+            self.frs_topic, MarkerArray, queue_size=1)
 
     def setup_subscriber(self):
         '''
@@ -503,18 +520,27 @@ class TrajectoryPlanner():
 
             # Check if we need to replan
             if self.plan_state_buffer.new_data_available and self.planner_ready:
+                rospy.loginfo("ENTERED WE NEED TO REPLAN")
                 # initialize obstacles list
                 obstacles_list = []
-                # append vertices
-                for vertex in TrajectoryPlanner.static_obstacle_dict.values():
-                    obstacles_list.append(vertex)
-
-                self.planner.update_obstacles(obstacles_list)
-
                 # Get current state from plan_state_buffer
                 state = self.plan_state_buffer.readFromRT()
 
+                # append vertices
+                for vertex in TrajectoryPlanner.static_obstacle_dict.values():
+                    obstacles_list.append(vertex)
+                # call request to FRS
                 cur_time = state[-1]
+                request = cur_time + np.arange(self.planner.T)*self.planner.dt
+                response = GetFRSResponse(request)
+                print(type(response))
+                new_obs_list = frs_to_obstacle(response)
+                print(type(new_obs_list))
+                obstacles_list.extend(new_obs_list)
+
+                self.planner.update_obstacles(obstacles_list)
+
+                # planning stuff
                 dt = cur_time - t_last_replan
                 if dt < self.replan_dt:
                     continue
@@ -557,6 +583,9 @@ class TrajectoryPlanner():
 
                 # publish the new policy for RVIZ visualization
                 self.trajectory_pub.publish(new_policy.to_msg())
+
+                # publish visualization of FRS's
+                self.frs_pub.publish(frs_to_msg(response))
 
                 t_last_replan = cur_time
 
