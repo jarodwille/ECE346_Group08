@@ -468,8 +468,6 @@ class TrajectoryPlanner():
         This function is the main thread for receding horizon planning
         We repeatedly call ILQR to replan the trajectory (policy) once the new state is available
         '''
-        # initialize obstacles list
-        obstacles_list = []
 
         rospy.loginfo(
             'Receding Horizon Planning thread started waiting for ROS service calls...')
@@ -505,7 +503,8 @@ class TrajectoryPlanner():
 
             # Check if we need to replan
             if self.plan_state_buffer.new_data_available and self.planner_ready:
-
+                # initialize obstacles list
+                obstacles_list = []
                 # append vertices
                 for vertex in TrajectoryPlanner.static_obstacle_dict.values():
                     obstacles_list.append(vertex)
