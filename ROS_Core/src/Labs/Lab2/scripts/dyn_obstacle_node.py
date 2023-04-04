@@ -30,7 +30,8 @@ def frs2setarray(frs):
 
 class DynObstacle():
     def __init__(self):
-        # Read ROS topic names to subscribe
+        
+        # Read ROS topic names to subscribe 
         self.dyn_obs_topic = get_ros_param(
             '~dyn_obs_topic', '/Obstacles/Dynamic')
 
@@ -53,10 +54,15 @@ class DynObstacle():
         ###############################################
         # Class variable to store the most recent dynamic obstacle's poses
         self.dyn_obstacles = []
+        
+        # setup subscriber to get poses of other agents (Lab 2 - Task 3.1.1)
         self.dyn_obs_sub = rospy.Subscriber(
             self.dyn_obs_topic, OdometryArray, self.dyn_obs_callback
         )
-
+        
+        self.srv = rospy.Service('/obstacles/get_frs', GetFRS, self.srv_cb)
+        self.dyn_config_srv = Server(configConfig, self.dyn_config_callback)
+    
         print('1')
 
         ###############################################
@@ -73,6 +79,8 @@ class DynObstacle():
         # http://wiki.ros.org/dynamic_reconfigure/Tutorials/HowToWriteYourFirstCfgFile
         # http://wiki.ros.org/dynamic_reconfigure/Tutorials/SettingUpDynamicReconfigureForANode%28python%29
         ###############################################
+        
+        
         # Dynamic reconfigure server
         self.K_vx = 0
         self.K_vy = 0
@@ -108,7 +116,7 @@ class DynObstacle():
         return config
 
     def dyn_obs_callback(self, odom_array):
-        self.dyn_obstacles.append(odom_array.odom_list)
+        self.dyn_obstacles = odom_array.odom_list # Before append, which makes no sense
 
     def srv_cb(self, req):
         '''
@@ -120,22 +128,17 @@ class DynObstacle():
             frs_list = self.frs.get(obstacle, t_list, self.K_vx, self.K_vy, self.K_y,
                                     self.dx, self.dy, allow_lane_change=self.allow_lane_change)
             for frs in frs_list:  # Iterate through N possible FRSs
-                respond.FRS.append(frs2setarray(frs))
+                respond.FRS.append(frs2setarray(frs))               
         return respond
-
 
 if __name__ == '__main__':
     ##########################################
     # TODO: Initialize a ROS Node with a DynObstacle object
     ##########################################
-    print("is this getting reached?")
-    print("is this getting reached? 2")
+     
     rospy.init_node("racecar_obs_detection")
-    print("is this getting reached? 3")
+    print("racecar_obs_detection node initalized")
+    
     dyn_obs = DynObstacle()
-    print("is this getting reached? 4")
-    dyn_config_srv = Server(configConfig, dyn_obs.dyn_config_callback)
-    print("is this getting reached? 5")
-    reset_srv = rospy.Service(
-        '/obstacles/get_frs', GetFRS, dyn_obs.srv_cb)
+        
     rospy.spin()

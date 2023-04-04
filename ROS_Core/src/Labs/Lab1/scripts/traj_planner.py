@@ -55,7 +55,7 @@ class TrajectoryPlanner():
         self.setup_service()
 
         rospy.loginfo("BEFORE")
-        self.frs_client = self.get_frs_client()
+        self.frs_client = rospy.ServiceProxy('/obstacles/get_frs', GetFRS) #self.get_frs_client()
         rospy.loginfo("AFETER!!!!!")
         # start planning and control thread
         threading.Thread(target=self.control_thread).start()
@@ -66,6 +66,10 @@ class TrajectoryPlanner():
                 target=self.receding_horizon_planning_thread).start()
 
     def get_frs_client(self):
+        '''
+        Create client for ‘/obstacles/get frs’ (Lab 2 - Task 3.2.1)
+        '''
+        
         print("BEFORE WAITING")
         rospy.wait_for_service('/obstacles/get_frs')
         print("after WAITING!!!")
@@ -91,9 +95,8 @@ class TrajectoryPlanner():
         self.control_topic = get_ros_param(
             '~control_topic', '/control/servo_control')
         self.traj_topic = get_ros_param('~traj_topic', '/Planning/Trajectory')
-        self.static_obs_topic = get_ros_param(
-            '~static_obs_topic', '/Obstacles/Static')  # newly added
-        self.frs_topic = get_ros_param('~frs_topic', '/vis/FRS')
+        self.static_obs_topic = get_ros_param('~static_obs_topic', '/Obstacles/Static') # obstcale topic 
+        self.frs_topic = get_ros_param('~frs_topic', '/vis/FRS') #FRS Topic (Lab 2 - Task 3.2.2)
 
         # Read the simulation flag,
         # if the flag is true, we are in simulation
@@ -141,7 +144,7 @@ class TrajectoryPlanner():
         self.control_pub = rospy.Publisher(
             self.control_topic, ServoMsg, queue_size=1)
 
-        # FRS Publisher
+        # FRS Publisher (Lab 2 - Task 3.2.2)
         self.frs_pub = rospy.Publisher(
             self.frs_topic, MarkerArray, queue_size=1)
 
@@ -529,13 +532,20 @@ class TrajectoryPlanner():
                 # append vertices
                 for vertex in TrajectoryPlanner.static_obstacle_dict.values():
                     obstacles_list.append(vertex)
-                # call request to FRS
+                    
+                # Call service client (request to FRS) (Lab 2 - Task 3.2.3)
                 cur_time = state[-1]
                 request = cur_time + np.arange(self.planner.T)*self.planner.dt
-                response = GetFRSResponse(request)
+                response = self.frs_client(request)
                 print(type(response))
+                
+                # Process response of service client call (Lab 2 - Task 3.2.4)
                 new_obs_list = frs_to_obstacle(response)
-                print(type(new_obs_list))
+                print("get response")
+                # publish visualization of FRS's (Lab 2 - Task 3.2.5)
+                self.frs_pub.publish(frs_to_msg(response))
+                
+                #Extend the obstacles list with new obstacles (Lab 2 - Task 3.2.2)
                 obstacles_list.extend(new_obs_list)
 
                 self.planner.update_obstacles(obstacles_list)
@@ -584,8 +594,7 @@ class TrajectoryPlanner():
                 # publish the new policy for RVIZ visualization
                 self.trajectory_pub.publish(new_policy.to_msg())
 
-                # publish visualization of FRS's
-                self.frs_pub.publish(frs_to_msg(response))
+               
 
                 t_last_replan = cur_time
 

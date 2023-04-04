@@ -45,7 +45,6 @@ def multistep_zonotope_reachset(init_box, a_mat, b_mat, input_box, dt_list, quic
         zono = onestep_zonotope_reachset(
             zono, a_mat, b_mat, input_box, dt)
         reachable_set_list.append(zono)
-
     return reachable_set_list
 
 
