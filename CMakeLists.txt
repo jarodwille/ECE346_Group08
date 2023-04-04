@@ -4,6 +4,8 @@ project(racecar_routing)
 find_package(catkin REQUIRED COMPONENTS 
       dynamic_reconfigure
       std_msgs
+      nav_msgs
+      geometry_msgs
       # racecar_msgs
       tf2
       message_generation)
@@ -45,7 +47,7 @@ catkin_python_setup()
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(DIRECTORY srv FILES Reset.srv)
+add_service_files(DIRECTORY srv FILES Plan.srv)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -55,10 +57,12 @@ catkin_python_setup()
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  nav_msgs
+  geometry_msgs
+  std_msgs  # Or other packages containing msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -91,6 +95,8 @@ generate_dynamic_reconfigure_options(
 catkin_package(
     CATKIN_DEPENDS rospy
     std_msgs
+    nav_msgs
+    geometry_msgs
     # racecar_msgs
     tf2
     dynamic_reconfigure 

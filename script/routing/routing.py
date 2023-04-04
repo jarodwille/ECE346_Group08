@@ -9,9 +9,10 @@ from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
 from tf.transformations import euler_from_quaternion
 from .util import map_to_markerarray, get_ros_param
-import message_filters
+
 from dynamic_reconfigure.server import Server
 from racecar_routing.cfg import routingConfig
+from racecar_routing.srv import Plan, PlanResponse
 
 class Routing:
     def __init__(self, map_file):
@@ -26,8 +27,7 @@ class Routing:
         
         self.dyn_server = Server(routingConfig, self.reconfigure_callback)
         
-        self.setup_publisher()
-        self.setup_subscriber() 
+        self.setup_sub_pub() 
                     
     def reconfigure_callback(self, config, level):
         self.goal_with_heading = config['goal_with_heading']
@@ -37,26 +37,43 @@ class Routing:
     def read_parameters(self):
         self.odom_topic = get_ros_param('~odom_topic', '/slam_pose')
         self.lane_change_cost = get_ros_param('~lane_change_cost', 0.5)
+        self.click_goal = get_ros_param('~click_goal', True)
+                
+    def setup_sub_pub(self):
+        if self.click_goal: # This is for the case when we click on the map to set the goal
+            self.path_pub = rospy.Publisher('Routing/Path', Path, queue_size=10)
+            self.odom_msg = None
+            self.pose_sub = rospy.Subscriber(self.odom_topic, Odometry, self.odom_callback, queue_size=1)
+            # This subscribe to the 2D Nav Goal in RVIZ
+            self.goal_sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.replan_callback, queue_size=1)
+            
+    def setup_service(self):
+        self.plan_srv = rospy.Service('/routing/reset', Plan, self.plan_srv_cb)
         
-    def setup_publisher(self):
-        self.path_pub = rospy.Publisher('Routing/Path', Path, queue_size=10)
+    def plan_srv_cb(self, req):
+        response = PlanResponse()
+        response.path = self.plan(req.odom, req.goal)
+        return response 
         
-    def setup_subscriber(self):
-        self.odom_msg = None
-        pose_sub = rospy.Subscriber(self.odom_topic, Odometry, self.odom_callback, queue_size=1)
-        # This subscribe to the 2D Nav Goal in RVIZ
-        goal_sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.replan, queue_size=1)
-        # self.replan_callback = message_filters.ApproximateTimeSynchronizer([pose_sub, goal_sub], 10, 0.1)
-        # self.replan_callback.registerCallback(self.replan)
-
     def odom_callback(self, odom_msg):
         self.odom_msg = odom_msg
         
-    def replan(self, goal_msg):
+    def replan_callback(self, goal_msg):
         if self.odom_msg is None:
             return
-        else:
-            odom_msg = self.odom_msg
+        planned_path = self.plan_route(self.odom_msg, goal_msg)
+        if planned_path is not None:
+            self.path_pub.publish(planned_path)
+        
+    def plan_route(self, odom_msg, goal_msg):
+        ''' 
+        This is the main function to plan the route
+        Parameters:
+            odom_msg: Odometry message, current pose of the robot
+            goal_msg: PoseStamped message, goal pose of the robot
+        Returns:
+            path_msg: Path message, Planned path
+        '''
             
         start_x = odom_msg.pose.pose.position.x
         start_y = odom_msg.pose.pose.position.y
@@ -78,7 +95,7 @@ class Routing:
         
         if path is None:
             rospy.logwarn('No path found')
-            return
+            return None
         
         path_msg = Path()
         path_msg.header = odom_msg.header
@@ -91,8 +108,11 @@ class Routing:
             temp.pose.orientation.y = waypoint[3] # right width
             temp.pose.orientation.z = waypoint[4] # speed limit
             path_msg.poses.append(temp)
-            
         
-        self.path_pub.publish(path_msg)
+        return path_msg
+        
+        
+        
+
         
 
