@@ -48,7 +48,7 @@ class Routing:
             self.goal_sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.replan_callback, queue_size=1)
             
     def setup_service(self):
-        self.plan_srv = rospy.Service('/routing/reset', Plan, self.plan_srv_cb)
+        self.plan_srv = rospy.Service('/routing/plan', Plan, self.plan_srv_cb)
         
     def plan_srv_cb(self, req):
         response = PlanResponse()
