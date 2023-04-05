@@ -101,7 +101,6 @@ catkin_package(
     tf2
     dynamic_reconfigure 
     message_runtime
-    lanelet2
 )
 
 # ########### install #############
