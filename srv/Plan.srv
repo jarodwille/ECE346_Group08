@@ -1,4 +1,4 @@
-nav_msgs/Odometry odom
-geometry_msgs/PoseStamped goal
+float32[] start
+float32[] goal
 ---
 nav_msgs/Path path

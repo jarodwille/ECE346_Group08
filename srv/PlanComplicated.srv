@@ -1,0 +1,4 @@
+nav_msgs/Odometry odom
+geometry_msgs/PoseStamped goal
+---
+nav_msgs/Path path

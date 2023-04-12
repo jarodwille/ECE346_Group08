@@ -28,7 +28,8 @@ class Routing:
         self.dyn_server = Server(routingConfig, self.reconfigure_callback)
         
         self.setup_sub_pub() 
-                    
+        self.setup_service()
+        
     def reconfigure_callback(self, config, level):
         self.goal_with_heading = config['goal_with_heading']
         rospy.loginfo(f"Set goal_with_heading to {self.goal_with_heading}")
@@ -52,7 +53,7 @@ class Routing:
         
     def plan_srv_cb(self, req):
         response = PlanResponse()
-        response.path = self.plan(req.odom, req.goal)
+        response.path = self.plan_route(req.start, req.goal)
         return response 
         
     def odom_callback(self, odom_msg):
@@ -61,20 +62,8 @@ class Routing:
     def replan_callback(self, goal_msg):
         if self.odom_msg is None:
             return
-        planned_path = self.plan_route(self.odom_msg, goal_msg)
-        if planned_path is not None:
-            self.path_pub.publish(planned_path)
+        odom_msg = self.odom_msg
         
-    def plan_route(self, odom_msg, goal_msg):
-        ''' 
-        This is the main function to plan the route
-        Parameters:
-            odom_msg: Odometry message, current pose of the robot
-            goal_msg: PoseStamped message, goal pose of the robot
-        Returns:
-            path_msg: Path message, Planned path
-        '''
-            
         start_x = odom_msg.pose.pose.position.x
         start_y = odom_msg.pose.pose.position.y
         
@@ -89,16 +78,27 @@ class Routing:
                 goal_msg.pose.orientation.z, goal_msg.pose.orientation.w]
         goal_psi = euler_from_quaternion(q)[-1]
         goal_pose = np.array([goal_x, goal_y, goal_psi])
-                
+        
         rospy.loginfo(f"Planning route from [{start_x:.2f}, {start_y:.2f}, {start_psi:.2f}] to [{goal_x:.2f}, {goal_y:.2f}, {goal_psi:.2f}]")
-        path = self.lanelet_map.get_shortest_path(start_pose, goal_pose, True, self.goal_with_heading)
+        
+        planned_path = self.plan_route(start_pose, goal_pose, True, self.goal_with_heading, goal_msg.header)
+        if planned_path is not None:
+            self.path_pub.publish(planned_path)
+        
+    def plan_route(self, start_pose, goal_pose, start_with_heading=False, goal_with_heading=False, header = None):
+        ''' 
+        This is the main function to plan the route
+        '''
+        
+        path = self.lanelet_map.get_shortest_path(start_pose, goal_pose, start_with_heading, goal_with_heading)
         
         if path is None:
             rospy.logwarn('No path found')
             return None
         
         path_msg = Path()
-        path_msg.header = odom_msg.header
+        if header is not None:
+            path_msg.header = header
         for waypoint in path:
             temp = PoseStamped()
             temp.header = temp.header
