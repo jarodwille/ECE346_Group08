@@ -106,11 +106,11 @@ class PyLaneletMap:
         if (start_lanelet.id == end_lanelet.id \
                 or end_lanelet.id in start_lanelet.left \
                 or end_lanelet.id in start_lanelet.right):
-            if abs(start_s - end_s)*start_lanelet.length < 0.1:
-                if verbose:
-                    print("Start and end points are too close")
-                return None
-            if end_s < start_s:
+            # if abs(start_s - end_s)*start_lanelet.length < 0.1:
+            #     if verbose:
+            #         print("Start and end points are too close")
+            #     return None
+            if end_s <= start_s:
                 centerline_list.append(
                     self.get_reference(start_lanelet, start_s, 1, endpoint = False)
                     )
