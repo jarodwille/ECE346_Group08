@@ -37,7 +37,7 @@ class Policy():
         distance = np.linalg.norm(self.nominal_X[:2,:].T-x[:2], axis=1)
         i = np.argmin(distance)
         
-        if distance[i] > 1:
+        if distance[i] > 0.5:
             return None, None, None
         
         x_i = self.nominal_X[:,i]
@@ -53,10 +53,6 @@ class Policy():
     def get_ref_controls(self, t):
         '''
         Return the nominal control at time t and forward
-        Args:
-            t: float time in seconds
-        Returns:
-            ref_u: np.array of shape (dim_u, T) reference controls at time t and forward
         '''
         i = self.get_index(t)
         if i>= self.T:

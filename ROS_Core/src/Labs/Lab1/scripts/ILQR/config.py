@@ -1,9 +1,6 @@
 import yaml
 
 class Config():
-    '''
-    This class defines parameters for ILQR.
-    '''
     def __init__(self):
 
         ####################################################
@@ -125,9 +122,6 @@ class Config():
         self.obs_b = 10.0 # parameter for ExpLinear Cost
                 
     def load_config(self, config_path):
-        '''
-        This function loads parameters from a yaml file.
-        '''
         with open(config_path, 'r') as f:
             config_dict = yaml.load(f, Loader=yaml.FullLoader)
             
