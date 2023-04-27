@@ -27,6 +27,11 @@ from utils import frs_to_obstacle, frs_to_msg, get_obstacle_vertices, get_ros_pa
 from visualization_msgs.msg import MarkerArray
 from racecar_obs_detection.srv import GetFRS, GetFRSResponse
 
+#final project imports 
+from racecar_routing.srv import Plan, PlanResponse, PlanRequest
+
+#from You_Need_to_Define_the_import_Path_Here import RefPath 
+from ref_path import RefPath
 
 class TrajectoryPlanner():
     '''
@@ -53,10 +58,14 @@ class TrajectoryPlanner():
         self.setup_subscriber()
 
         self.setup_service()
-
-        rospy.loginfo("BEFORE")
-        self.frs_client = rospy.ServiceProxy('/obstacles/get_frs', GetFRS) #self.get_frs_client()
-        rospy.loginfo("AFETER!!!!!")
+        
+        # this is redundant if we already have a module for get_fsr_client
+        # self.frs_client = rospy.ServiceProxy('/obstacles/get_frs', GetFRS) #self.get_frs_client()
+        
+        self.frs_client = self.get_frs_client()
+        
+        self.plan_client = self.get_routing_plan_client()
+        
         # start planning and control thread
         threading.Thread(target=self.control_thread).start()
         if not self.receding_horizon:
@@ -64,15 +73,28 @@ class TrajectoryPlanner():
         else:
             threading.Thread(
                 target=self.receding_horizon_planning_thread).start()
-
+    
+    def get_routing_plan_client(self):
+        '''
+        Create client for ‘/routing/plan’ 
+        '''
+        
+        print("Before Waiting Routing/plan")
+        rospy.wait_for_service('/routing/plan')
+        print("After Waiting Routing/plan")
+        
+        try:
+            return rospy.ServiceProxy('/routing/plan', Plan)
+        except rospy.ServiceException as e:
+            print("Service call failed: %s" % e)
+    
     def get_frs_client(self):
         '''
         Create client for ‘/obstacles/get frs’ (Lab 2 - Task 3.2.1)
         '''
-        
-        print("BEFORE WAITING")
+
         rospy.wait_for_service('/obstacles/get_frs')
-        print("after WAITING!!!")
+    
         try:
             return rospy.ServiceProxy('/obstacles/get_frs', GetFRS)
         except rospy.ServiceException as e:
@@ -269,7 +291,6 @@ class TrajectoryPlanner():
         dx[3] = np.arctan2(np.sin(dx[3]), np.cos(dx[3]))
 
         # Compute local state feedback control policy
-
         u = u_ref + K_closed_loop@dx
 
         # Grab the acceleration component of the local state feedback control policy
@@ -420,6 +441,7 @@ class TrajectoryPlanner():
         rospy.loginfo(
             'Policy Planning thread started waiting for ROS service calls...')
         while not rospy.is_shutdown():
+            
             # determine if we need to replan
             if self.path_buffer.new_data_available and self.planner_ready:
                 new_path = self.path_buffer.readFromRT()
