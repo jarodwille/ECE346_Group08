@@ -27,11 +27,12 @@ from utils import frs_to_obstacle, frs_to_msg, get_obstacle_vertices, get_ros_pa
 from visualization_msgs.msg import MarkerArray
 from racecar_obs_detection.srv import GetFRS, GetFRSResponse
 
-#final project imports 
+# final project imports
 from racecar_routing.srv import Plan, PlanResponse, PlanRequest
 
-#from You_Need_to_Define_the_import_Path_Here import RefPath 
-from ref_path import RefPath
+#from You_Need_to_Define_the_import_Path_Here import RefPath
+#from ref_path import RefPath
+
 
 class TrajectoryPlanner():
     '''
@@ -58,14 +59,14 @@ class TrajectoryPlanner():
         self.setup_subscriber()
 
         self.setup_service()
-        
+
         # this is redundant if we already have a module for get_fsr_client
         # self.frs_client = rospy.ServiceProxy('/obstacles/get_frs', GetFRS) #self.get_frs_client()
-        
+
         self.frs_client = self.get_frs_client()
-        
+
         self.plan_client = self.get_routing_plan_client()
-        
+
         # start planning and control thread
         threading.Thread(target=self.control_thread).start()
         if not self.receding_horizon:
@@ -73,28 +74,28 @@ class TrajectoryPlanner():
         else:
             threading.Thread(
                 target=self.receding_horizon_planning_thread).start()
-    
+
     def get_routing_plan_client(self):
         '''
         Create client for ‘/routing/plan’ 
         '''
-        
+
         print("Before Waiting Routing/plan")
         rospy.wait_for_service('/routing/plan')
         print("After Waiting Routing/plan")
-        
+
         try:
             return rospy.ServiceProxy('/routing/plan', Plan)
         except rospy.ServiceException as e:
             print("Service call failed: %s" % e)
-    
+
     def get_frs_client(self):
         '''
         Create client for ‘/obstacles/get frs’ (Lab 2 - Task 3.2.1)
         '''
 
         rospy.wait_for_service('/obstacles/get_frs')
-    
+
         try:
             return rospy.ServiceProxy('/obstacles/get_frs', GetFRS)
         except rospy.ServiceException as e:
@@ -117,8 +118,10 @@ class TrajectoryPlanner():
         self.control_topic = get_ros_param(
             '~control_topic', '/control/servo_control')
         self.traj_topic = get_ros_param('~traj_topic', '/Planning/Trajectory')
-        self.static_obs_topic = get_ros_param('~static_obs_topic', '/Obstacles/Static') # obstcale topic 
-        self.frs_topic = get_ros_param('~frs_topic', '/vis/FRS') #FRS Topic (Lab 2 - Task 3.2.2)
+        self.static_obs_topic = get_ros_param(
+            '~static_obs_topic', '/Obstacles/Static')  # obstcale topic
+        # FRS Topic (Lab 2 - Task 3.2.2)
+        self.frs_topic = get_ros_param('~frs_topic', '/vis/FRS')
 
         # Read the simulation flag,
         # if the flag is true, we are in simulation
@@ -441,7 +444,7 @@ class TrajectoryPlanner():
         rospy.loginfo(
             'Policy Planning thread started waiting for ROS service calls...')
         while not rospy.is_shutdown():
-            
+
             # determine if we need to replan
             if self.path_buffer.new_data_available and self.planner_ready:
                 new_path = self.path_buffer.readFromRT()
@@ -554,20 +557,20 @@ class TrajectoryPlanner():
                 # append vertices
                 for vertex in TrajectoryPlanner.static_obstacle_dict.values():
                     obstacles_list.append(vertex)
-                    
+
                 # Call service client (request to FRS) (Lab 2 - Task 3.2.3)
                 cur_time = state[-1]
                 request = cur_time + np.arange(self.planner.T)*self.planner.dt
                 response = self.frs_client(request)
                 print(type(response))
-                
+
                 # Process response of service client call (Lab 2 - Task 3.2.4)
                 new_obs_list = frs_to_obstacle(response)
                 print("get response")
                 # publish visualization of FRS's (Lab 2 - Task 3.2.5)
                 self.frs_pub.publish(frs_to_msg(response))
-                
-                #Extend the obstacles list with new obstacles (Lab 2 - Task 3.2.2)
+
+                # Extend the obstacles list with new obstacles (Lab 2 - Task 3.2.2)
                 obstacles_list.extend(new_obs_list)
 
                 self.planner.update_obstacles(obstacles_list)
@@ -615,8 +618,6 @@ class TrajectoryPlanner():
 
                 # publish the new policy for RVIZ visualization
                 self.trajectory_pub.publish(new_policy.to_msg())
-
-               
 
                 t_last_replan = cur_time
 
