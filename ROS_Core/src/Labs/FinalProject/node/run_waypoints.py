@@ -55,8 +55,7 @@ def main():
     init = Waypoints()
 
     while not rospy.is_shutdown():
-         init.calculate_waypoints()
-
+        init.calculate_waypoints()
    
     rospy.spin()
 
