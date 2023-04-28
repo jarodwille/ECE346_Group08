@@ -7,6 +7,7 @@ import pickle
 from visualization_msgs.msg import MarkerArray
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
+from FinalProject.srv import call_waypoints
 
 class Waypoints:
     def __init__(self):
@@ -28,22 +29,28 @@ class Waypoints:
             index = self.waypoints_order[i] # goal index in goal order list
             self.goal_array[i, :] = self.waypoints_array[index-1, :]
             
-        print('goal array', self.goal_array)
-
-
+        # print('goal array', self.goal_array)
+        
+        rospy.wait_for_service('call_waypoints')
+        self.goal_srv = rospy.ServiceProxy('call_waypoints', call_waypoints)
         self.goal_pub = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=10)
         
         ### call service request to routing
            
 
     def calculate_waypoints(self):
-        goal = PoseStamped()
-        goal.header.frame_id = 'world_frame'
-        goal.pose.position.x = self.goal_array[0][0]
-        goal.pose.position.y = self.goal_array[0][1]
-        self.goal_pub.publish(goal)
-
-
+        
+        for i in range(len(self.goal_array)):
+            for j in range(len(self.goal_array[i])):
+                goal = PoseStamped()
+                goal.header.frame_id = 'world_frame'
+                goal.pose.position.x = self.goal_array[i][j]
+                goal.pose.position.y = self.goal_array[i][j]
+                while not self.goal_srv:
+                    rospy.loginfo('Waiting for goal service...')
+                    rospy.sleep(1)  # Wait for 1 second before checking again
+                    
+                self.goal_pub.publish(goal)
 
 def main():
     '''
