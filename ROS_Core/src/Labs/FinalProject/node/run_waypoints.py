@@ -7,7 +7,7 @@ import pickle
 from visualization_msgs.msg import MarkerArray
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
-from FinalProject.srv import call_waypoints
+from FinalProject.srv import call_waypoints, call_waypointsRequest
 
 class Waypoints:
     def __init__(self):
@@ -18,7 +18,7 @@ class Waypoints:
         for i in range(12):
             goal_name = "goal_" + str(i+1)
             goal_read = rospy.get_param(goal_name)
-            print("goal_read: {}, shape: {}".format(goal_read, np.array(goal_read).shape))
+            # print("goal_read: {}, shape: {}".format(goal_read, np.array(goal_read).shape))
             self.waypoints_array = np.concatenate((self.waypoints_array, np.array(goal_read).reshape(1, 2)), axis=0)
         
         self.waypoints_array = np.delete(self.waypoints_array, 0, 0)
@@ -41,16 +41,24 @@ class Waypoints:
     def calculate_waypoints(self):
         
         for i in range(len(self.goal_array)):
-            for j in range(len(self.goal_array[i])):
-                goal = PoseStamped()
-                goal.header.frame_id = 'world_frame'
-                goal.pose.position.x = self.goal_array[i][j]
-                goal.pose.position.y = self.goal_array[i][j]
-                while not self.goal_srv:
-                    rospy.loginfo('Waiting for goal service...')
-                    rospy.sleep(1)  # Wait for 1 second before checking again
+            request = call_waypointsRequest()
+            goal = PoseStamped()
+            goal.header.frame_id = 'world_frame'
+            goal.pose.position.x = self.goal_array[i][0]
+            goal.pose.position.y = self.goal_array[i][1]
+            # print('Goal--------------------------------')
+            # print('goalx: {}, goaly: {}'.format(goal.pose.position.x, goal.pose.position.y))
+            # print('-------------------------------------')
+            
+            request.Pose = goal
+            response = self.goal_srv(request)
+    
+            while not response.success:
+                response = self.goal_srv(request) ### if not success, keep call the service
                     
-                self.goal_pub.publish(goal)
+              
+                
+                    
 
 def main():
     '''

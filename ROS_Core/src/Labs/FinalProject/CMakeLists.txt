@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   racecar_msgs
   racecar_routing
+  message_generation
 )
 
 # Uncomment this if the package has a setup.py. This macro ensures
@@ -53,7 +54,7 @@ catkin_python_setup()
 # Generate services in the 'srv' folder
 add_service_files(
   FILES
-  srv/call_waypoints.srv
+  call_waypoints.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -63,11 +64,12 @@ add_service_files(
 #   Action2.action
 # )
 
-## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+# Generate added messages and services with any dependencies listed here
+generate_messages(
+  DEPENDENCIES
+  geometry_msgs
+  std_msgs  # Or other packages containing msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##

@@ -18,4 +18,7 @@
   <depend>racecar_msgs</depend>
   <depend>dynamic_reconfigure</depend>
   <depend>nav_msgs</depend>
+  <depend>message_generation</depend>
+  <exec_depend>message_runtime</exec_depend>
+
 </package>
