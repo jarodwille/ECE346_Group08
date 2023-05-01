@@ -32,16 +32,19 @@ class Waypoints:
         # print('goal array', self.goal_array)
         
         rospy.wait_for_service('call_waypoints')
-        self.goal_srv = rospy.ServiceProxy('call_waypoints', call_waypoints)
-        self.goal_pub = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=10)
         
-        ### call service request to routing
+        ### Initialize the service. This atims to get the service request from routing.py
+        self.goal_srv = rospy.ServiceProxy('call_waypoints', call_waypoints)
+        # self.goal_pub = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=10) 
+        
            
 
     def calculate_waypoints(self):
         
         for i in range(len(self.goal_array)):
+            # Get the request for the next waypoint from service in routing.py
             request = call_waypointsRequest()
+            # Put the waypoint into the PoseStamped() object as cumstomized in call_waypoints.srv in srv folder
             goal = PoseStamped()
             goal.header.frame_id = 'world_frame'
             goal.pose.position.x = self.goal_array[i][0]
@@ -52,7 +55,8 @@ class Waypoints:
             
             request.Pose = goal
             response = self.goal_srv(request)
-    
+
+            # If haven't recevied the request to be True, keep calling and until routing.py request, pass to the next goal in for loop
             while not response.success:
                 response = self.goal_srv(request) ### if not success, keep call the service
                     
