@@ -51,10 +51,12 @@ catkin_python_setup()
 #   Message2.msg
 # )
 
-# Generate services in the 'srv' folder
+## Generate services in the 'srv' folder
 add_service_files(
   FILES
-  call_waypoints.srv
+  Task.srv
+  Reward.srv
+  Schedule.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -64,10 +66,9 @@ add_service_files(
 #   Action2.action
 # )
 
-# Generate added messages and services with any dependencies listed here
+## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  geometry_msgs
   std_msgs  # Or other packages containing msgs
 )
 
@@ -117,7 +118,8 @@ catkin_package(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
-  node/run_waypoints.py
+  scripts/task2_world_node.py
+  scripts/task1_obstacle_detection_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
