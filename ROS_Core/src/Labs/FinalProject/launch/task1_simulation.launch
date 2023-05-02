@@ -57,5 +57,7 @@
     
     <node type="rqt_gui" name="rqt_gui" pkg="rqt_gui" 
         args="--perspective-file $(find racecar_interface)/rviz/rqt_sim.perspective"/>
+
+    <node pkg="finalproject" type="run_waypoints.py" name="waypoints" output="$(arg output)">
     
 </launch>

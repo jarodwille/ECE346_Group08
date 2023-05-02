@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(FinalProject)
+project(finalproject)
 
 
 ## Find catkin macros and libraries
@@ -118,6 +118,7 @@ catkin_package(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
+  node/run_waypoints.py
   scripts/task2_world_node.py
   scripts/task1_obstacle_detection_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
