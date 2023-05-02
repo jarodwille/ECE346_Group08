@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(FinalProject)
+project(final_project)
 
 
 ## Find catkin macros and libraries
