@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-<<<<<<< HEAD
-project(finalproject)
-=======
 project(final_project)
->>>>>>> e8504e12c18194ff586414c91151cfa8a6fdc429
 
 
 ## Find catkin macros and libraries
