@@ -21,8 +21,6 @@
         <arg name="lane_change_cost"        value="$(arg lane_change_cost)"/>
     </include>
 
-    <rosparam file="$(find final_project)/task2.yaml" command="load" />
-
     <!-- This section launch the simulation of the boss truck -->
     <!-- You DO NOT need to modify this section -->
     <node pkg="racecar_interface" type="simulation_node.py" name="boss_simulation_node" output="$(arg output)">
