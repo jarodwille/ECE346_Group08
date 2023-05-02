@@ -1,6 +1,10 @@
 <?xml version="1.0"?>
 <package format="2">
+<<<<<<< HEAD
   <name>finalproject</name>
+=======
+  <name>final_project</name>
+>>>>>>> e8504e12c18194ff586414c91151cfa8a6fdc429
   <version>0.1.0</version>
   <description>The final_project package</description>
 
