@@ -14,10 +14,10 @@
     <arg name="replan_dt"           default="0.1"                   doc="time step for replanning"/>
     <arg name="ilqr_config"         default="configs/lab1.yaml"     doc="path to ilqr config file"/>
 
-    <rosparam command="load" file="$(find final_project)/task1.yaml" />
+    <!-- <rosparam command="load" file="$(find final_project)/task1.yaml" /> -->
 
     <!-- This section launch another launch file -->
-    <include file="$(find racecar_interface)/launch/simulation.launch" >
+    <!-- <include file="$(find racecar_interface)/launch/simulation.launch" >
         <arg name="odom_topic"              value="$(arg odom_topic)" />
         <arg name="control_topic"           value="$(arg control_topic)" />
         <arg name="pub_rate"                value="$(arg pub_rate)" />
@@ -26,7 +26,7 @@
         <arg name="init_yaw"                value="$(arg init_yaw)" />
         <arg name="enable_routing"          value="true" />
         <arg name="lane_change_cost"        value="$(arg lane_change_cost)"/>
-    </include>
+    </include> -->
 
     <node pkg="racecar_planner" type="traj_planning_node.py" name="traj_planning" output="$(arg output)">
         <param name="odom_topic"           value="$(arg odom_topic)" />
@@ -36,14 +36,14 @@
         <param name="path_topic"           value="$(arg path_topic)" />
         <param name="package_path"         value="$(find racecar_planner)" />
         <param name="simulation"           value="True" />
-        <param name="receding_horizon"            value="$(arg receding_horizon)" />
+        <param name="receding_horizon"     value="$(arg receding_horizon)" />
         <param name="replan_dt"            value="$(arg replan_dt)" />
         <param name="ilqr_params_file"     value="$(arg ilqr_config)" />
         <param name="PWM_model"            value="$(find racecar_planner)/configs/mlp_model.sav" />
     </node>
 
-    <node pkg="final_project" type="run_waypoints.py" name="waypoints" output="$(arg output)">
+    <!-- <node pkg="final_project" type="run_waypoints.py" name="waypoints" output="$(arg output)">
        
-    </node>
+    </node> -->
 
 </launch>

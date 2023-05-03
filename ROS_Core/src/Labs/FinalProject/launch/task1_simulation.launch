@@ -15,6 +15,7 @@
     <arg name="static_obs_topic"    default="/Obstacles/Static"     doc="ROS topic for static obstacles"/>
     <arg name="dyn_obs_topic"       default="/Obstacles/Dynamic"    doc="ROS topic for dynamic obstacles"/>
     
+    
     <rosparam file="$(find final_project)/task1.yaml" command="load" />
 
     <node pkg="racecar_interface" type="simulation_node.py" name="simulation_node" output="$(arg output)">
@@ -23,7 +24,7 @@
         <param name="pub_rate"             value="$(arg pub_rate)" />
         <param name="init_x"               value="$(arg init_x)" />
         <param name="init_y"               value="$(arg init_y)" />
-        <param name="init_yaw"             value="$(arg init_yaw)" />
+        <param name="init_yaw"             value="$(arg init_yaw)" /> 
     </node>
 
     <node pkg="racecar_interface" type="traffic_simulation_node.py" name="traffic_simulation_node" output="$(arg output)">
@@ -45,11 +46,17 @@
             <arg name="output"              value="$(arg output)"/>
     </include>
 
+    <include file="$(find racecar_planner)/launch/ilqr_simulation.launch">
+            <arg name="output"              value="$(arg output)"/>
+            <arg name="receding_horizon"    value="True"/>
+            <arg name="ilqr_config"         value="configs/lab2_task1.yaml"/>
+    </include>
+
     <include file="$(find racecar_routing)/launch/routing.launch">
             <arg name="output"              value="$(arg output)"/>
             <arg name="odom_topic"          value="$(arg odom_topic)"/>
             <arg name="lane_change_cost"    value="$(arg lane_change_cost)"/>
-            <arg name="click_goal"          value="false"/>
+            <arg name="click_goal"          value="false"/> 
     </include>
 
     <node type="rviz" name="rviz" pkg="rviz" 
@@ -58,6 +65,6 @@
     <node type="rqt_gui" name="rqt_gui" pkg="rqt_gui" 
         args="--perspective-file $(find racecar_interface)/rviz/rqt_sim.perspective"/>
 
-    <node pkg="final_project" type="run_waypoints.py" name="waypoints" output="$(arg output)">
+    <node pkg="final_project" type="run_waypoints.py" name="waypoints" output="$(arg output)"/>
     
 </launch>
