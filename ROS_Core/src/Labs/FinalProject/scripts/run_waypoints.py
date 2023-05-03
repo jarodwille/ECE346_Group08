@@ -6,8 +6,9 @@ import numpy as np
 from visualization_msgs.msg import MarkerArray
 from nav_msgs.msg import Odometry
 import rospy
+from nav_msgs.msg import Path
 from racecar_routing.srv import Plan, PlanResponse, PlanRequest
-from task2_world.util import RefPath, get_ros_param
+from task2_world.util import RefPath, get_ros_param,  RealtimeBuffer
 # from Labs.FinalProject.scripts.task2_world.util import get_ros_param
 
 class Waypoints:
@@ -33,14 +34,14 @@ class Waypoints:
         rospy.wait_for_service('/routing/plan')
         self.plan_client = rospy.ServiceProxy('/routing/plan', Plan)
             
-        ## setup the position publisher
-        self.pose_sub = rospy.Subscriber('/Simulation/Pose', Odometry, self.odom_callback, queue_size=1)
+        self.pose_sub = rospy.Subscriber('/Simulation/Pose', Odometry, self.odom_callback, queue_size=10)
+        
+        self.path_pub = rospy.Publisher('Routing/Path', Path, queue_size=10, latch = True)
         
         
-       
-        
-        
+              
     def odom_callback(self, odom_msg):
+        print('-----------------------------')
         self.odom_msg = odom_msg
         
     
@@ -78,6 +79,7 @@ class Waypoints:
             
             # This is the reference path that we passed to the ILQR planner in Lab1
             ref_path = RefPath(centerline, width_L, width_R, speed_limit, loop=False)
+            self.path_pub.publish(ref_path)
             
           
             dist = 10.0
