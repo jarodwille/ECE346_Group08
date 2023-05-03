@@ -79,15 +79,13 @@ class Waypoints:
             # This is the reference path that we passed to the ILQR planner in Lab1
             ref_path = RefPath(centerline, width_L, width_R, speed_limit, loop=False)
             
-            ### need to rethink this current position logic
-            curr_x = self.odom_msg.pose.pose.position.x
-            curr_y = self.odom_msg.pose.pose.position.y
-
-
-            dist = np.sqrt((curr_x - x_goal)**2 + (curr_y - y_goal)**2)
-            
+          
+            dist = 10.0
             while dist > 2.0:
-                rospy.sleep(1.0)           
+                ### need to rethink this current position logic
+                curr_x = self.odom_msg.pose.pose.position.x
+                curr_y = self.odom_msg.pose.pose.position.y
+                dist = np.sqrt((curr_x - x_goal)**2 + (curr_y - y_goal)**2)         
         
         
            
