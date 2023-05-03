@@ -4,6 +4,8 @@ import yaml
 from std_srvs.srv import Empty, EmptyRequest, EmptyResponse
 from final_project.srv import Schedule, ScheduleRequest, ScheduleResponse, \
     Task, TaskRequest, TaskResponse, Reward, RewardRequest, RewardResponse
+from nav_msgs.msg import Odometry
+from racecar_routing.srv import Plan, PlanResponse, PlanRequest
 
 
 class SwiftHaulTasks:
@@ -11,6 +13,7 @@ class SwiftHaulTasks:
 
         self.load_warehouse_info()
         self.setup_clients()
+        self.setup_subscriber()
 
         # response of boss schedule
         self.boss_schedule = self.boss_schedule_client(ScheduleRequest())
@@ -45,6 +48,16 @@ class SwiftHaulTasks:
         rospy.wait_for_service('/SwiftHaul/GetReward')
         self.reward_client = rospy.ServiceProxy('/SwiftHaul/GetReward', Reward)
 
+        # set up planning client
+        rospy.wait_for_service('/routing/plan')
+        self.plan_client = rospy.ServiceProxy('/routing/plan', Plan)
+
+    def setup_subscriber(self):
+        self.pose_sub = rospy.Subscriber(self.odom_topic, Odometry, self.odom_callback, queue_size=1)
+
+    def odom_callback(self, odom_msg):
+        self.odom_msg = odom_msg
+
     def calculate_waypoints(self):
         # If still aims for thecurrent waypoint, keep replanning.
         odom_msg = self.odom_msg
@@ -59,7 +72,7 @@ class SwiftHaulTasks:
             y_goal = self.goal_array[i][1]  # y coordinate of the goal
 
             plan_request = PlanRequest([x_start, y_start], [x_goal, y_goal])
-            plan_response = plan_client(plan_request)
+            plan_response = self.plan_client(plan_request)
 
             # The following script will generate a reference path in [RefPath](scripts/task2_world/util.py#L65) class, which has been used in your Lab1's ILQR planner
             x = []

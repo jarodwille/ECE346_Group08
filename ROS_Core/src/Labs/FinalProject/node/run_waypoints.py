@@ -33,7 +33,7 @@ class Waypoints:
         rospy.wait_for_service('/routing/plan')
         plan_client = rospy.ServiceProxy('/routing/plan', Plan)
             
-        ## setup the position publisher
+        ## setup the position subscriber
         self.pose_sub = rospy.Subscriber(self.odom_topic, Odometry, self.odom_callback, queue_size=1)
         
         
