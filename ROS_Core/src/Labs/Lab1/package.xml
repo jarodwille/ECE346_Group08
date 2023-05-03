@@ -17,6 +17,6 @@
   <depend>racecar_msgs</depend>
   <depend>dynamic_reconfigure</depend>
   <depend>nav_msgs</depend>
-  <depend>FinalProject</depend>
+  <!-- <depend>final_project</depend> -->
 
 </package>

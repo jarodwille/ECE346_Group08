@@ -11,7 +11,6 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   nav_msgs
   racecar_msgs
-  FinalProject
 )
 
 # Uncomment this if the package has a setup.py. This macro ensures
@@ -106,7 +105,6 @@ catkin_package(
     racecar_msgs 
     nav_msgs 
     dynamic_reconfigure
-    FinalProject
 )
 
 #############
