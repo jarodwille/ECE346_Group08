@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   racecar_msgs
   racecar_routing
   message_generation
+  racecar_planner
 )
 
 # Uncomment this if the package has a setup.py. This macro ensures
@@ -118,6 +119,7 @@ catkin_package(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
+  # racecar_planner/traj_planning_node.py
   scripts/run_waypoints.py
   scripts/task2_world_node.py
   scripts/task1_obstacle_detection_node.py

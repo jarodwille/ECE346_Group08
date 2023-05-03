@@ -426,7 +426,7 @@ class TrajectoryPlanner():
                         rospy.logwarn_once('FRS server not available!')
                         frs_respond = None
 
-                    self.planner.update_obstacles(obstacles_list)
+                    # self.planner.update_obstacles(obstacles_list)
 
                     # Replan use ilqr
                     new_plan = self.planner.plan(

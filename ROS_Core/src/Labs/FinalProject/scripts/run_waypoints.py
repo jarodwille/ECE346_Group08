@@ -33,24 +33,28 @@ class Waypoints:
             
         rospy.wait_for_service('/routing/plan')
         self.plan_client = rospy.ServiceProxy('/routing/plan', Plan)
-            
+        
+        self.odom_msg = None
         self.pose_sub = rospy.Subscriber('/Simulation/Pose', Odometry, self.odom_callback, queue_size=10)
         
-        self.path_pub = rospy.Publisher('Routing/Path', Path, queue_size=10, latch = True)
+        self.path_pub = rospy.Publisher('Routing/Path', Path, queue_size=10,latch = True)
         
         
               
     def odom_callback(self, odom_msg):
-        print('-----------------------------')
+        
         self.odom_msg = odom_msg
         
     
     def calculate_waypoints(self):
         # If still aims for thecurrent waypoint, keep replanning.
+        i = 0
         
+        while not rospy.is_shutdown() and i<len(self.goal_array):
+            if self.odom_msg == None:
+                rospy.sleep(0.1)
+                continue
         
-        for i in range(len(self.goal_array)):
-            
             # Start position
             x_start = self.odom_msg.pose.pose.position.x
             y_start = self.odom_msg.pose.pose.position.y
@@ -60,34 +64,21 @@ class Waypoints:
             
             plan_request = PlanRequest([x_start, y_start], [x_goal, y_goal])
             plan_response = self.plan_client(plan_request)
-            
-            # The following script will generate a reference path in [RefPath](scripts/task2_world/util.py#L65) class, which has been used in your Lab1's ILQR planner
-            x = []
-            y = []
-            width_L = []
-            width_R = []
-            speed_limit = []
-            
-            for waypoint in plan_response.path.poses:
-                x.append(waypoint.pose.position.x)
-                y.append(waypoint.pose.position.y)
-                width_L.append(waypoint.pose.orientation.x)
-                width_R.append(waypoint.pose.orientation.y)
-                speed_limit.append(waypoint.pose.orientation.z)
                 
-            centerline = np.array([x, y])
-            
-            # This is the reference path that we passed to the ILQR planner in Lab1
-            ref_path = RefPath(centerline, width_L, width_R, speed_limit, loop=False)
-            self.path_pub.publish(ref_path)
-            
-          
-            dist = 10.0
-            while dist > 2.0:
-                ### need to rethink this current position logic
-                curr_x = self.odom_msg.pose.pose.position.x
-                curr_y = self.odom_msg.pose.pose.position.y
-                dist = np.sqrt((curr_x - x_goal)**2 + (curr_y - y_goal)**2)         
+            path_msg: Path
+            path_msg = plan_response.path
+            path_msg.header.stamp = rospy.get_rostime()
+            path_msg.header.frame_id = 'map'
+            self.path_pub.publish(path_msg)
+           
+
+            dist = np.sqrt((x_start - x_goal)**2 + (y_start - y_goal)**2)   
+            if dist<0.4:
+                i +=1  
+                rospy.sleep(0.1)
+            else:
+                rospy.sleep(1)
+        rospy.loginfo("Finished!")   
         
         
            
@@ -125,12 +116,8 @@ def main():
     rospy.init_node('run_waypoints', anonymous = True)
     
     init = Waypoints()
-
-    while not rospy.is_shutdown():
-        init.calculate_waypoints()
+    init.calculate_waypoints()
    
-    rospy.spin()
-
 if __name__=='__main__':
     main()
     
