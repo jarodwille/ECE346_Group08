@@ -10,6 +10,8 @@
     <arg name="lane_change_cost"    default="2"                     doc="cost of lane change"/>
 
     <!-- TODO: add your decision making and trajectory planning nodes here -->
+    <node pkg="final_project" type="task2.py" name="ego_simulation_node" output="$(arg output)"/>
+
     <!-- This section launch the simulation of the student truck -->
     <include file="$(find racecar_interface)/launch/simulation.launch" >
         <arg name="odom_topic"              value="$(arg odom_topic)" />
