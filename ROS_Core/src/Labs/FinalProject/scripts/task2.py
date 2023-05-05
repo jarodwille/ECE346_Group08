@@ -91,7 +91,7 @@ class SwiftHaulTasks:
             x_start = self.odom_msg.pose.pose.position.x
             y_start = self.odom_msg.pose.pose.position.y
 
-            # warehouse_idx= self.boss_schedule.goal_warehouse_index[i]
+            # warehouse_idx= self.boss_schedule.goal_warehouse_index[i] ##we don't want the boss schudule we only want boss task (only need sechdule for rejoing after side task)
             # request a task from the boss
             warehouse_idx = self.boss_task_client(TaskRequest()).task
             print("For this Task Go to Warehouse: ", warehouse_idx)
