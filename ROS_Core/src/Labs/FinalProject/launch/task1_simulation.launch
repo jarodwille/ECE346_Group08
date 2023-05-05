@@ -4,7 +4,7 @@
     <arg name="output"              default="screen"                doc="display output to screen or log file"/>
     <arg name="odom_topic"          default="/Simulation/Pose"      doc="ROS topic for the pose"/>
     <arg name="control_topic"       default="/Control"              doc="ROS topic for control input"/>
-    <arg name="lane_change_cost"    default="1"                     doc="cost of lane change"/>
+    <arg name="lane_change_cost"    default="1.0"                     doc="cost of lane change"/>
     <arg name="pub_rate"            default="30"                    doc="rate at which to publish the pose"/>
     <arg name="init_x"              default="3"                     doc="initial x position"/>
     <arg name="init_y"              default="0.15"                     doc="initial y position"/>
