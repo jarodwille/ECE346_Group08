@@ -35,9 +35,9 @@
     </node> -->
 
 
-    <include file="$(find racecar_interface)/launch/visualization.launch">
+    <!-- <include file="$(find racecar_interface)/launch/visualization.launch">
             <arg name="output"              value="$(arg output)"/>
-    </include>
+    </include> -->
 
     <node pkg="final_project" type="run_waypoints.py" name="waypoints" output="$(arg output)"/>
 
