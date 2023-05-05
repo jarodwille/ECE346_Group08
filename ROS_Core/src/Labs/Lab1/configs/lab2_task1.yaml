@@ -57,7 +57,7 @@ a_max: 5.0 # maximum acceleration
 a_min: -5.0 # minimum acceleration
 
 # reference velocity
-v_ref: 1 # reference velocity
+v_ref: 1.0 # reference velocity
 ####################################################
 ########## Parameters for ILQR COST ################
 ####################################################
@@ -96,5 +96,6 @@ ctrl_cost_accel_weight: 1.0
 ctrl_cost_steer_weight: 0.5
 
 ########        Obstacle Cost          ############
-obs_a: 25.0 # parameter for obstacle cost
+# obs_a: 25.0 # parameter for obstacle cost
+obs_a: 40.0 # parameter for obstacle cost
 obs_b: 10.0 # parameter for ExpLinear Cost
