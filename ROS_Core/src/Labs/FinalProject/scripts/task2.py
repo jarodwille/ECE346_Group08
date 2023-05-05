@@ -120,8 +120,11 @@ class SwiftHaulTasks:
            
             # if we arrive at warehouse
             if np.abs(x_start - x_goal) < dx and np.abs(y_start - y_goal) < dy:
+                print("our distance from goal: ",np.ab(x_start - x_goal),"< dx: ", dx )
+
                 print("Truck inside warehouse")
-                reward_response = self.reward_client(RewardRequest(warehouse_idx)) # check with boss if we made it
+                # calculate reward for completing a task
+                reward_response = self.reward_client(RewardRequest()) # check with boss if we made it
                 print("Boss agrees that complete task and gives us the reward")
                 if reward_response.done == False:
                     print("boss is unsatisfied with our arrival")
