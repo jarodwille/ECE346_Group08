@@ -27,7 +27,7 @@ class SwiftHaulTasks:
     def load_warehouse_info(self):
 
         # Retrieve Warehouse Information from yaml file
-        with open('/home/saferoboticslab/ECE346_Group08/ROS_Core/src/Labs/FinalProject/task2.yaml', 'r') as stream:
+        with open('/home/maddie/ECE346_Group08/ROS_Core/src/Labs/FinalProject/task2.yaml', 'r') as stream:
             warehouse_info = yaml.safe_load(stream)
 
         # HACK: No failsafe is implemented for invalid warehouse config
@@ -91,11 +91,13 @@ class SwiftHaulTasks:
             x_start = self.odom_msg.pose.pose.position.x
             y_start = self.odom_msg.pose.pose.position.y
 
-            warehouse_idx= self.boss_schedule.goal_warehouse_index[i]
+            # warehouse_idx= self.boss_schedule.goal_warehouse_index[i]
+            warehouse_idx = self.boss_task_client(TaskRequest()).task
             x_goal = self.warehouse_location[warehouse_idx][0]# x coordinate of the goal
             y_goal = self.warehouse_location[warehouse_idx][1]# y coordinate of the goal
             dx = self.warehouse_location[warehouse_idx][2]# x width of the warehouse
             dy = self.warehouse_location[warehouse_idx][3]# y width of the warehouse
+
             print("current location", x_start, ", ", y_start)
             print("current goal", x_goal, ", ", y_goal)
             print("dx: ", dx, "dy: ", dy)
@@ -103,18 +105,22 @@ class SwiftHaulTasks:
 
             
             plan_request = PlanRequest([x_start, y_start], [x_goal, y_goal])
+            print("request planned")
             plan_response = self.plan_client(plan_request)
+            print("send plan to planning client to get plan response")
+
             
             path_msg = plan_response.path
             path_msg.header.stamp = rospy.get_rostime()
             path_msg.header.frame_id = 'map'
             self.path_pub.publish(path_msg)
-
+            print("publish path")
            
             # if we find we're within warehouse
             if np.abs(x_start - x_goal) < dx and np.abs(y_start - y_goal) < dy:
                 print("Truck inside warehouse")
-                response = self.boss_schedule_client(RewardRequest()) # check with boss if we made it
+                response = self.reward_client(RewardRequest(warehouse_idx)) # check with boss if we made it
+                print("Boss agrees that we made it")
                 if response.done == False:
                     print("boss is unsatisfied with our arrival")
                 
