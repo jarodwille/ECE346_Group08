@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import rospy
 import numpy as np
+import math
 
 # ROS related imports
 from visualization_msgs.msg import MarkerArray
@@ -35,12 +36,8 @@ class Waypoints:
         self.plan_client = rospy.ServiceProxy('/routing/plan', Plan)
         
         self.odom_msg = None
-
-        # Subscriber for Simulation
         self.pose_sub = rospy.Subscriber('/Simulation/Pose', Odometry, self.odom_callback, queue_size=10)
-
-        # Subscriber for Car 
-        #self.pose_sub = rospy.Subscriber('/SLAM/Pose', Odometry, self.odom_callback, queue_size=10)
+        # self.pose_sub = rospy.Subscriber('/SLAM/Pose', Odometry, self.odom_callback, queue_size=10)
         
         self.path_pub = rospy.Publisher('Routing/Path', Path, queue_size=10,latch = True)
         
@@ -59,14 +56,15 @@ class Waypoints:
             if self.odom_msg == None:
                 rospy.sleep(0.1)
                 continue
-        
+
             # Start position
             x_start = self.odom_msg.pose.pose.position.x
             y_start = self.odom_msg.pose.pose.position.y
             
             x_goal = self.goal_array[i][0]# x coordinate of the goal
             y_goal = self.goal_array[i][1]# y coordinate of the goal
-            
+                        
+            # if progress < 1.0:
             plan_request = PlanRequest([x_start, y_start], [x_goal, y_goal])
             plan_response = self.plan_client(plan_request)
                 
@@ -75,14 +73,17 @@ class Waypoints:
             path_msg.header.stamp = rospy.get_rostime()
             path_msg.header.frame_id = 'map'
             self.path_pub.publish(path_msg)
-           
-
-            dist = np.sqrt((x_start - x_goal)**2 + (y_start - y_goal)**2)   
+            
+            dx = x_goal - x_start
+            dy = y_goal - y_start
+            angle = math.atan2(dy, dx)
+            
+            dist = np.sqrt(dx**2 + dy**2)   
             if dist<0.4:
                 i +=1  
                 rospy.sleep(0.1)
             else:
-                rospy.sleep(1)
+                rospy.sleep(1.0)
         rospy.loginfo("Finished!")   
         
         

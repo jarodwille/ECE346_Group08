@@ -1,0 +1,33 @@
+<launch>
+    <!-- This fix the library linkage issue in RoboStack -->
+    <env name="LD_PRELOAD" value="$(env CONDA_PREFIX)/lib/libyaml-cpp.so" />
+    <arg name="output"              default="screen"                doc="display output to screen or log file"/>
+    <arg name="odom_topic"          default="/SLAM/Pose"      doc="ROS topic for the pose"/> 
+    <arg name="control_topic"       default="/Control"              doc="ROS topic for control input"/>
+    <arg name="lane_change_cost"    default="1"                     doc="cost of lane change"/>
+    <arg name="pub_rate"            default="30"                    doc="rate at which to publish the pose"/>
+    <arg name="init_x"              default="3"                     doc="initial x position"/>
+    <arg name="init_y"              default="0.15"                     doc="initial y position"/>
+    <arg name="init_yaw"            default="0"                     doc="initial z position"/>
+    <arg name="num_dyn_obs"         default="0"                     doc="number of dynamic obsects"/>
+    <arg name="num_static_obs"      default="20"                     doc="number of static obsects"/>
+    <arg name="static_obs_size"     default="0.2"                   doc="type of static obsects"/>
+    <arg name="static_obs_topic"    default="/Obstacles/Static"     doc="ROS topic for static obstacles"/>
+    <arg name="dyn_obs_topic"       default="/Obstacles/Dynamic"    doc="ROS topic for dynamic obstacles"/>
+    
+    
+    <rosparam file="$(find final_project)/task1.yaml" command="load" />
+
+    <include file="$(find racecar_planner)/launch/ilqr_truck.launch">
+            <arg name="output"              value="$(arg output)"/>
+            <arg name="receding_horizon"    value="True"/>
+            <arg name="ilqr_config"         value="configs/lab2_task1.yaml"/>
+    </include>
+
+    <include file="$(find racecar_interface)/launch/visualization.launch">
+            <arg name="output"              value="$(arg output)"/>
+    </include>
+
+    <node pkg="final_project" type="run_waypoints.py" name="waypoints" output="$(arg output)"/>
+    
+</launch>

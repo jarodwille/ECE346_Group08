@@ -147,6 +147,7 @@ class TrajectoryPlanner():
         for obs in msg.markers:
             id, vertices = get_obstacle_vertices(obs)
             self.static_obstacle_dict[id] = vertices
+          
 
     def setup_service(self):
         '''
@@ -254,7 +255,7 @@ class TrajectoryPlanner():
         '''
         Main control thread to publish control command
         '''
-        rate = rospy.Rate(40)
+        rate = rospy.Rate(100)  ## was40
         u_queue = queue.Queue()
 
         # values to keep track of the previous control command
@@ -314,6 +315,7 @@ class TrajectoryPlanner():
                     u[1]
                 ])
 
+
                 # predict the current state use past control command
                 for i in range(u_queue.qsize()):
                     u_next = u_queue.queue[i]
@@ -346,7 +348,8 @@ class TrajectoryPlanner():
                 if state_ref is not None:
                     accel, steer_rate = self.compute_control(
                         state_cur, state_ref, u_ref, K)
-                    steer = max(-0.37, min(0.37, prev_u[1] + steer_rate*dt))
+                    # steer = max(-0.37, min(0.37, prev_u[1] + steer_rate*dt))
+                    steer = max(-0.6, min(0.6, prev_u[1] + steer_rate*dt))
                 else:
                     # reset the policy buffer if the policy is not valid
                     rospy.logwarn(
@@ -425,8 +428,31 @@ class TrajectoryPlanner():
                     except:
                         rospy.logwarn_once('FRS server not available!')
                         frs_respond = None
+                        
+                    ######################################## This chunk is where I write my code for only apend the nearest three obstacles into self.planner
+                    
+                    odom_msg = self.control_state_buffer.readFromRT()
+                    
+                    currx = odom_msg.pose.pose.position.x
+                    curry = odom_msg.pose.pose.position.y
+                    
+                    obs_dist_list = []
+                    for obs in obstacles_list:
+                        obs_xy = obs[:, :2] # 8x2 numpy arr
+                        
+                        # obs_dist_list is a list of 20
+                        obs_dist_list.append(np.sum(np.linalg.norm(obs_xy - np.tile(np.array([currx, curry]), (8, 1)), axis=0)))
 
-                    # self.planner.update_obstacles(obstacles_list)
+                    sorted_obs_idx = np.argsort(np.array(obs_dist_list))
+                    
+                    trunc_obs_list = [obstacles_list[int(i)] for i in sorted_obs_idx[:5]]
+
+                   
+                    
+                    ############################################ My code ends here
+
+                    self.planner.update_obstacles(trunc_obs_list)
+                    
 
                     # Replan use ilqr
                     new_plan = self.planner.plan(
