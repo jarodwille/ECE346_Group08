@@ -36,8 +36,8 @@ class Waypoints:
         self.plan_client = rospy.ServiceProxy('/routing/plan', Plan)
         
         self.odom_msg = None
-        self.pose_sub = rospy.Subscriber('/Simulation/Pose', Odometry, self.odom_callback, queue_size=10)
-        # self.pose_sub = rospy.Subscriber('/SLAM/Pose', Odometry, self.odom_callback, queue_size=10)
+        # self.pose_sub = rospy.Subscriber('/Simulation/Pose', Odometry, self.odom_callback, queue_size=10)
+        self.pose_sub = rospy.Subscriber('/SLAM/Pose', Odometry, self.odom_callback, queue_size=10)
         
         self.path_pub = rospy.Publisher('Routing/Path', Path, queue_size=10,latch = True)
         

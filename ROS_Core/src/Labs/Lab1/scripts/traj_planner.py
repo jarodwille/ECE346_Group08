@@ -445,12 +445,21 @@ class TrajectoryPlanner():
 
                     sorted_obs_idx = np.argsort(np.array(obs_dist_list))
                     
-                    trunc_obs_list = [obstacles_list[int(i)] for i in sorted_obs_idx[:5]]
+                    trunc_obs_list = []
+                    for i in range(len(obstacles_list)):
+                        if obs_dist_list[i] < 1.0:
+                            trunc_obs_list.append(obstacles_list[int(i)])
+                    
+                    
+                    
+                    # trunc_obs_list = [obstacles_list[int(i)] for i in sorted_obs_idx[:2]]
+                    
 
                    
                     
                     ############################################ My code ends here
 
+                    # self.planner.update_obstacles(trunc_obs_list)
                     self.planner.update_obstacles(trunc_obs_list)
                     
 

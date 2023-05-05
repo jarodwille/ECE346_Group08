@@ -24,10 +24,30 @@
             <arg name="ilqr_config"         value="configs/lab2_task1.yaml"/>
     </include>
 
+    <!-- <node pkg="racecar_interface" type="traffic_simulation_node.py" name="traffic_simulation_node" output="$(arg output)">
+        <param name="map_file"             value="$(find racecar_routing)/cfg/track.pkl" />
+        <param name="num_dyn_obs"          value="$(arg num_dyn_obs)" />
+        <param name="num_static_obs"       value="$(arg num_static_obs)" />
+        <param name="static_obs_size"      value="$(arg static_obs_size)" />
+        <param name="static_obs_topic"     value="$(arg static_obs_topic)" />
+        <param name="dyn_obs_topic"        value="$(arg dyn_obs_topic)" />
+        <param name="pub_rate"             value="$(arg pub_rate)" />
+    </node> -->
+
+
     <include file="$(find racecar_interface)/launch/visualization.launch">
             <arg name="output"              value="$(arg output)"/>
     </include>
 
     <node pkg="final_project" type="run_waypoints.py" name="waypoints" output="$(arg output)"/>
-    
+
+<node pkg="final_project" type="task1_obstacle_detection_node.py" name="static_obstacle_detection_node" output="$(arg output)">
+        <param name="odom_topic"           value="$(arg odom_topic)" />
+        <param name="static_obs_size"      value="$(arg static_obs_size)" />
+        <param name="static_obs_topic"     value="$(arg static_obs_topic)" />
+        <param name="static_tag_topic"     value="/SLAM/Tag_Detections_Dynamic" />
+        <param name="dyn_obs_topic"        value="$(arg dyn_obs_topic)" />
+        <param name="pub_rate"             value="30" />
+    </node>
+
 </launch>

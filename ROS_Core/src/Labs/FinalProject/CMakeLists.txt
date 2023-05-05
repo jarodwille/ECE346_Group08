@@ -120,6 +120,7 @@ catkin_package(
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
   # racecar_planner/traj_planning_node.py
+  scripts/task1_obstacle_detection_node.py
   scripts/task2.py
   scripts/run_waypoints.py
   scripts/task2_world_node.py
