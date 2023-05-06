@@ -139,15 +139,9 @@ class SwiftHaulTasks:
                 print("Total reward so far: ", reward_response.total_reward)
 
                 
-                # stop (plan route to self)! if boss hasn't started new task (meaning boss stopped)
+                # if boss hasn't started new task (meaning boss stopped) do nothing
                 while(self.boss_task_client(TaskRequest()).task == -1):
                     print("No new task received")
-                    #plan_request = PlanRequest([x_start, y_start], [x_start, y_start])
-                    #plan_response = self.plan_client(plan_request)
-                    #path_msg = plan_response.path
-                    #path_msg.header.stamp = rospy.get_rostime()
-                    #path_msg.header.frame_id = 'map'
-                    #self.path_pub.publish(path_msg)
                     rospy.sleep(0.1)
 
                 i += 1
