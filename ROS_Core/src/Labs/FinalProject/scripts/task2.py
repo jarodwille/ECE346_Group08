@@ -80,6 +80,8 @@ class SwiftHaulTasks:
     def plan_path(self):
         # If still aims for thecurrent waypoint, keep replanning.
         i = 0
+        rospy.sleep(2.0)
+        warehouse_idx = None
         
         while not rospy.is_shutdown() and i<self.num_warehouse:
             if self.odom_msg == None:
@@ -93,8 +95,12 @@ class SwiftHaulTasks:
 
             # warehouse_idx= self.boss_schedule.goal_warehouse_index[i] ##we don't want the boss schudule we only want boss task (only need sechdule for rejoing after side task)
             # request a task from the boss
-            warehouse_idx = self.boss_task_client(TaskRequest()).task
-            print("For this Task Go to Warehouse: ", warehouse_idx)
+            try:
+                if warehouse_idx is None:
+                    warehouse_idx = self.boss_task_client(TaskRequest()).task
+                    print("For this Task Go to Warehouse: ", warehouse_idx)
+            except Exception as e:
+                continue
 
             # Get information about the goal warehouse
             x_goal = self.warehouse_location[warehouse_idx][0]# x coordinate of the goal
@@ -112,6 +118,7 @@ class SwiftHaulTasks:
             plan_response = self.plan_client(plan_request)
             print("send plan to planning client to get plan response")
             
+            path_msg: Path
             path_msg = plan_response.path
             path_msg.header.stamp = rospy.get_rostime()
             path_msg.header.frame_id = 'map'
@@ -119,12 +126,12 @@ class SwiftHaulTasks:
             print("publish path")
            
             # if we arrive at warehouse
-            if np.abs(x_start - x_goal) < dx and np.abs(y_start - y_goal) < dy:
-                print("our distance from goal: ",np.ab(x_start - x_goal),"< dx: ", dx )
+            if np.abs(x_start - x_goal) < dx*0.5 and np.abs(y_start - y_goal) < dy*0.5:
+                print("our distance from goal: ",np.abs(x_start - x_goal),"< dx: ", dx )
 
                 print("Truck inside warehouse")
                 # calculate reward for completing a task
-                reward_response = self.reward_client(RewardRequest()) # check with boss if we made it
+                reward_response = self.reward_client(RewardRequest(warehouse_idx)) # check with boss if we made it
                 print("Boss agrees that complete task and gives us the reward")
                 if reward_response.done == False:
                     print("boss is unsatisfied with our arrival")
@@ -134,17 +141,18 @@ class SwiftHaulTasks:
                 
                 # stop (plan route to self)! if boss hasn't started new task (meaning boss stopped)
                 while(self.boss_task_client(TaskRequest()).task == -1):
-                    "No new task received"
-                    plan_request = PlanRequest([x_start, y_start], [x_start, y_start])
-                    plan_response = self.plan_client(plan_request)
-                    path_msg = plan_response.path
-                    path_msg.header.stamp = rospy.get_rostime()
-                    path_msg.header.frame_id = 'map'
-                    self.path_pub.publish(path_msg)
+                    print("No new task received")
+                    #plan_request = PlanRequest([x_start, y_start], [x_start, y_start])
+                    #plan_response = self.plan_client(plan_request)
+                    #path_msg = plan_response.path
+                    #path_msg.header.stamp = rospy.get_rostime()
+                    #path_msg.header.frame_id = 'map'
+                    #self.path_pub.publish(path_msg)
                     rospy.sleep(0.1)
 
                 i += 1
                 rospy.sleep(0.1)
+                warehouse_idx = None
             else:
                 rospy.sleep(1)
         rospy.loginfo("Finished!")   

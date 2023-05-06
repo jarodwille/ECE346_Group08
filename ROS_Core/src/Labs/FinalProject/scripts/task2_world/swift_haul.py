@@ -449,7 +449,7 @@ class SwiftHaul:
             self.doing_boss_task = True
             return TaskResponse(task, reward)
         else:
-            rospy.logwarn("Student truck is not at warehouse %d",
+            rospy.logwarn("Student truck is not at warehouse %c",
                           chr(ord('A') + warehouse_idx))
 
         return TaskResponse(task, reward)
