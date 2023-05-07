@@ -27,7 +27,7 @@ class SwiftHaulTasks:
     def load_warehouse_info(self):
 
         # Retrieve Warehouse Information from yaml file
-        with open('/home/saferoboticslab/ECE346_Group08/ROS_Core/src/Labs/FinalProject/task2.yaml', 'r') as stream:
+        with open('ECE346_Group08/ROS_Core/src/Labs/FinalProject/task2.yaml', 'r') as stream:
             warehouse_info = yaml.safe_load(stream)
 
         # HACK: No failsafe is implemented for invalid warehouse config
