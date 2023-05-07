@@ -2,6 +2,14 @@
 import rospy
 import numpy as np
 import math
+import matplotlib.path as mpltPath
+import pylanelet
+
+import sys
+import os
+import rospkg
+sys.path.append(os.path.join(rospkg.RosPack().get_path('racecar_planner'),'scripts','utils'))
+from static_obstacle import get_obstacle_vertices
 
 # ROS related imports
 from visualization_msgs.msg import MarkerArray
@@ -10,7 +18,10 @@ import rospy
 from nav_msgs.msg import Path
 from racecar_routing.srv import Plan, PlanResponse, PlanRequest
 from task2_world.util import RefPath, get_ros_param,  RealtimeBuffer
-# from Labs.FinalProject.scripts.task2_world.util import get_ros_param
+# from racecar_planner.utils import get_obstacle_vertices
+from geometry_msgs.msg import PoseStamped
+
+
 
 class Waypoints:
     def __init__(self):
@@ -36,10 +47,19 @@ class Waypoints:
         self.plan_client = rospy.ServiceProxy('/routing/plan', Plan)
         
         self.odom_msg = None
-        # self.pose_sub = rospy.Subscriber('/Simulation/Pose', Odometry, self.odom_callback, queue_size=10)
-        self.pose_sub = rospy.Subscriber('/SLAM/Pose', Odometry, self.odom_callback, queue_size=10)
+        ### for simulation
+        self.pose_sub = rospy.Subscriber('/Simulation/Pose', Odometry, self.odom_callback, queue_size=10)
+        # ### for real truck
+        # self.pose_sub = rospy.Subscriber('/SLAM/Pose', Odometry, self.odom_callback, queue_size=10)
         
         self.path_pub = rospy.Publisher('Routing/Path', Path, queue_size=10,latch = True)
+        
+        # ### Subscriber to get the obstacles (new added)
+        self.static_obs_sub = rospy.Subscriber(
+            '/Obstacles/Static', MarkerArray, self.static_obstacle_callback, queue_size=10)
+        
+        # # Load the lanelet map (new added)
+        # self.map = pylanelet.load("my_lanelet_map.osm")
         
         
               
@@ -47,6 +67,180 @@ class Waypoints:
         
         self.odom_msg = odom_msg
         
+    ### new added callback
+    def static_obstacle_callback(self, msg):
+        '''
+        Static obstacle callback function
+        '''
+        
+        self.obs_position = []
+        self.obs = msg
+
+        for marker in msg.markers:
+            x = marker.pose.position.x
+            y = marker.pose.position.y
+            self.obs_position.append([x, y])
+            
+       
+        
+           
+    # ### new added function 
+    # def calllanelet(self, waypoints, start_index, goal_index, positions):
+    #     map = self.map
+
+    #     # Define the start and goal positions as Lanelet points
+    #     ### would be current position for planning? need to think
+    #     start = pylanelet.Point2d(waypoints[start_index][0], waypoints[start_index][1])
+    #     goal = pylanelet.Point2d(waypoints[goal_index][0], waypoints[goal_index][1])
+
+    #     # Get the obstacle vertices in the world frame
+    #     obs_verticeslist = []
+    #     for index in self.obs_list_rollout:  
+    #         obs_id, obs_vertices = get_obstacle_vertices(self.obs[index])
+    #         obs_verticeslist.append(obs_vertices)
+            
+
+    #     # Convert the vertices to the Lanelet map frame
+    #     obs_vertices_map = [pylanelet.Point3d(obs_vertex[0], obs_vertex[1], obs_vertex[2]) for obs_vertex in obs_verticeslist]
+
+    #     # Create a Lanelet polygon representing the obstacle
+    #     obstacle = pylanelet.Polygon3d(obs_vertices_map)
+
+    #     # Add the obstacle to the Lanelet map
+    #     map.add(obstacle)
+
+    #     # Perform path planning using the A* algorithm
+    #     path = map.astar(start, goal, [obstacle])
+
+    #     # Extract the planned path as a list of Lanelet points
+    #     path_points = [p.centerline[0] for p in path]
+    #     # Conver iot as a nested list representing the x,y position
+    #     path_points_xy = [[point.x, point.y] for point in path_points]
+        
+    #     return path_points_xy
+    
+    def rrt(self, waypoints, start_index, goal_index, obstacles, max_iter=1000, max_dist=0.1):
+        
+        start = waypoints[start_index]
+        goal = waypoints[goal_index]
+        # Initialize the tree with the start node
+        nodes = [start]
+        edges = []
+        
+        for i in range(max_iter):
+            # Randomly sample a point in the space
+            sample = np.random.rand(2) * np.array([20, 20]) - np.array([10, 10])
+            
+            # Find the nearest node in the tree to the sampled point
+            nearest_idx = np.argmin(np.linalg.norm(np.array(nodes) - sample, axis=1))
+            nearest_node = nodes[nearest_idx]
+            
+            # Calculate the vector to the sampled point and normalize it
+            v = sample - nearest_node
+            v_norm = v / np.linalg.norm(v)
+            
+            # Calculate the new point by adding a scaled vector to the nearest node
+            new_node = nearest_node + max_dist * v_norm
+            
+            # Check if the new node collides with any obstacles
+            if any(np.linalg.norm(np.array(obstacles) - new_node, axis=1) < 0.1):
+                continue
+            
+            # Add the new node to the tree and record the edge
+            nodes.append(new_node)
+            edges.append((nearest_idx, len(nodes) - 1))
+            
+            # Check if the goal is reached
+            if np.linalg.norm(new_node - goal) < 0.1:
+                goal_idx = len(nodes) - 1
+                break
+        
+        # If the goal was not reached, return an empty path
+        if not 'goal_idx' in locals():
+            return []
+        
+        # Build the path by tracing back through the edges
+        path = [goal]
+        curr_idx = goal_idx
+        while curr_idx != 0:
+            prev_idx = [e[0] for e in edges if e[1] == curr_idx][0]
+            path.append(nodes[prev_idx])
+            curr_idx = prev_idx
+        path.append(start)
+        path.reverse()
+        
+        return path
+
+
+
+
+    
+    # Define a function to calculate the angle between two points
+    def angle_between_points(self, x1, y1, x2, y2):
+        return np.arctan2(y2-y1, x2-x1)
+    
+    
+    def rollout_obs(self, obs_position):
+        selected_obs = []
+        self.obs_list_rollout = []
+        ### check if the obstackes are inside the redius (r=1) circle center at teh current truck position
+        x_curr = self.odom_msg.pose.pose.position.x
+        y_curr = self.odom_msg.pose.pose.position.y
+        
+        for i in range(len(obs_position)):
+            # Calculate the Euclidean distance between current position and the obstacle position
+            distance = np.linalg.norm(np.array(obs_position[i]) - np.array([x_curr, y_curr]))
+            
+            # # Calculate the angle between your current position and the obstacle position
+            # obstacle_angle = self.angle_between_points(x_curr, y_curr, obs[0], obs[1])
+
+
+            # Check if the distance is less than 1 meter and if the obstacle is in front of you
+            if distance < 1.0:
+                selected_obs.append(obs_position[i])
+                self.obs_list_rollout.append(i)
+                
+        return selected_obs
+        
+        
+                
+                
+    ### new added function
+    def new_referencepath(self, pathnav):
+        posx = []
+        posy = []
+
+        iterpath = pathnav.path
+        for pose in iterpath.poses:
+            x = pose.pose.position.x
+            y = pose.pose.position.y
+            posx.append(x)
+            posy.append(y)
+          
+        waypoints = np.column_stack((posx, posy))
+        ### get the positions of the filtered obstacles
+        positions = np.array(self.rollout_obs(self.obs_position))
+        print('selected obstacle positions', positions)
+        
+        nearby_indices = []
+        for i in range(len(waypoints)):
+            distances = np.linalg.norm(positions - waypoints[i], axis=1)
+            if np.any(distances < 1.0):
+                nearby_indices.append(i)
+                
+        
+        if len(nearby_indices) == 0:
+            return []
+        else:
+            # start_index = 0 if nearby_indices[0] == 0 else nearby_indices[0] - 1
+            # goal_index = len(waypoints) - 1 if nearby_indices[-1] == len(waypoints) - 1 else nearby_indices[-1] + 1
+            # new_ref = self.calllanelet(waypoints, 0, -1, positions)
+            new_ref = self.rrt(waypoints, 0, -1, positions, 1000, 0.1)
+        
+        return new_ref
+        
+        
+       
     
     def calculate_waypoints(self):
         # If still aims for thecurrent waypoint, keep replanning.
@@ -61,22 +255,61 @@ class Waypoints:
             x_start = self.odom_msg.pose.pose.position.x
             y_start = self.odom_msg.pose.pose.position.y
             
+            print('start pos', x_start, y_start)
+            
             x_goal = self.goal_array[i][0]# x coordinate of the goal
             y_goal = self.goal_array[i][1]# y coordinate of the goal
                         
-            # if progress < 1.0:
+            
             plan_request = PlanRequest([x_start, y_start], [x_goal, y_goal])
             plan_response = self.plan_client(plan_request)
-                
+            
+            ### Newly added code
+            replan = self.new_referencepath(plan_response)
+            
             path_msg: Path
-            path_msg = plan_response.path
+            
+            print('replan', replan)
+            print('-------------------------------------')
+            
+            if not replan: ### check if this is empty
+                print('not replan---------------------------------------------')
+                path_msg = plan_response.path
+               
+            else: ### convert nested list into nav_msg.msg type
+                print('in replan----------------------------------------------')
+                path_msg = Path()
+                for point in replan:
+                    pose = PoseStamped()
+                    pose.pose.position.x = point[0]
+                    pose.pose.position.y = point[1]
+                    pose.pose.position.z = 0.0
+                    path_msg.poses.append(pose)
+                    
             path_msg.header.stamp = rospy.get_rostime()
             path_msg.header.frame_id = 'map'
+                
             self.path_pub.publish(path_msg)
+                
+            
+            
+            
+            
+            ### Nnewly added code ends here
+            ## can be commented for now for testing  
+            
+             
+            # path_msg: Path
+            # path_msg = plan_response.path
+            # path_msg.header.stamp = rospy.get_rostime()
+            # path_msg.header.frame_id = 'map'
+            # self.path_pub.publish(path_msg)
+            
+            
+            ## can be commented for now for testing
             
             dx = x_goal - x_start
             dy = y_goal - y_start
-            angle = math.atan2(dy, dx)
             
             dist = np.sqrt(dx**2 + dy**2)   
             if dist<0.4:
@@ -85,30 +318,6 @@ class Waypoints:
             else:
                 rospy.sleep(1.0)
         rospy.loginfo("Finished!")   
-        
-        
-           
-
-    # def calculate_waypoints(self):
-        
-    #     for i in range(len(self.goal_array)):
-    #         # Get the request for the next waypoint from service in routing.py
-    #         request = call_waypointsRequest()
-    #         # Put the waypoint into the PoseStamped() object as cumstomized in call_waypoints.srv in srv folder
-    #         goal = PoseStamped()
-    #         goal.header.frame_id = 'world_frame'
-    #         goal.pose.position.x = self.goal_array[i][0]
-    #         goal.pose.position.y = self.goal_array[i][1]
-    #         # print('Goal--------------------------------')
-    #         # print('goalx: {}, goaly: {}'.format(goal.pose.position.x, goal.pose.position.y))
-    #         # print('-------------------------------------')
-            
-    #         request.Pose = goal
-    #         response = self.goal_srv(request)
-
-    #         # If haven't recevied the request to be True, keep calling and until routing.py request, pass to the next goal in for loop
-    #         while not response.success:
-    #             response = self.goal_srv(request) ### if not success, keep call the service
                     
               
                 

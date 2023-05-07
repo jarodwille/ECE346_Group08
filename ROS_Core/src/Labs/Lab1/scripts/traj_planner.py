@@ -56,6 +56,7 @@ class TrajectoryPlanner():
         else:
             threading.Thread(
                 target=self.receding_horizon_planning_thread).start()
+            
 
     def read_parameters(self):
         '''
@@ -214,6 +215,7 @@ class TrajectoryPlanner():
             speed_limit.append(waypoint.pose.orientation.z)
 
         centerline = np.array([x, y])
+        
 
         try:
             ref_path = RefPath(centerline, width_L, width_R,
@@ -222,6 +224,7 @@ class TrajectoryPlanner():
             rospy.loginfo('Path received!')
         except:
             rospy.logwarn('Invalid path received! Move your robot and retry!')
+        
 
     @staticmethod
     def compute_control(x, x_ref, u_ref, K_closed_loop):
@@ -441,15 +444,12 @@ class TrajectoryPlanner():
                         obs_xy = obs[:, :2] # 8x2 numpy arr
                         
                         # obs_dist_list is a list of 20
-                        obs_dist_list.append(np.sum(np.linalg.norm(obs_xy - np.tile(np.array([currx, curry]), (8, 1)), axis=0)))
-
-                    sorted_obs_idx = np.argsort(np.array(obs_dist_list))
+                        obs_dist_list.append(np.mean(np.linalg.norm(obs_xy - np.tile(np.array([currx, curry]), (8, 1)), axis=0)))
                     
                     trunc_obs_list = []
                     for i in range(len(obstacles_list)):
                         if obs_dist_list[i] < 1.0:
                             trunc_obs_list.append(obstacles_list[int(i)])
-                    
                     
                     
                     # trunc_obs_list = [obstacles_list[int(i)] for i in sorted_obs_idx[:2]]
