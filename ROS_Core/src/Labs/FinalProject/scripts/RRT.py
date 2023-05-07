@@ -34,6 +34,7 @@ class RRT():
         self.goalSampleRate = goalSampleRate
         self.maxIter = maxIter
         self.obstacleList = obstacleList
+        print("HERE IS OBSTACLE LIST PASSED IN", self.obstacleList)
 
     def Planning(self):
         """

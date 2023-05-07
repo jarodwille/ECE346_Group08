@@ -20,7 +20,7 @@ from racecar_routing.srv import Plan, PlanResponse, PlanRequest
 from task2_world.util import RefPath, get_ros_param,  RealtimeBuffer
 # from racecar_planner.utils import get_obstacle_vertices
 from geometry_msgs.msg import PoseStamped
-from .RRT import RRT
+from RRT import RRT
 
 
 
@@ -175,7 +175,9 @@ class Waypoints:
             print("Start rrt planning")
 
             # Set Initial parameters
-            positions = [lst + [0.5] for lst in positions]
+            size_column = np.full((positions.shape[0], 1), 0.25)
+            positions = np.hstack((positions, size_column)) # add size to positions
+
             rrt = RRT(start=waypoints[start_index], goal=waypoints[goal_index],
                     randArea=[-10, 10], obstacleList=positions)
             new_ref = rrt.Planning()
@@ -183,15 +185,15 @@ class Waypoints:
             # new_ref = self.rrt(waypoints, start_index, goal_index, positions, 1000, 0.1)
             print('new_ref', new_ref)
             
-            # Loop through the original path and find the waypoints to be replaced
-            replace_idxs = list(range(start_index + 1, goal_index))
-            print(replace_idxs)
-            
+            print("original", waypoints)
+            print("start index", start_index)
+            print("end index", goal_index)
             # Replace the waypoints with the corresponding waypoints from the replanned path
-            for i, idx in enumerate(replace_idxs):
-                print('idx', idx)
-                print('new_ref', new_ref)
-                waypoints[idx] = new_ref[i]
+            waypoints = np.delete(waypoints, slice(start_index, goal_index+1), axis=0)
+            print("after delete", waypoints)
+            waypoints = np.insert(waypoints, start_index, new_ref, axis=0)
+            print("after replace, final", waypoints)
+
             
             Flag = True
             
