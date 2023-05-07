@@ -59,10 +59,6 @@ class Waypoints:
         self.static_obs_sub = rospy.Subscriber(
             '/Obstacles/Static', MarkerArray, self.static_obstacle_callback, queue_size=10)
         
-        # # Load the lanelet map (new added)
-        # self.map = pylanelet.load("my_lanelet_map.osm")
-        
-        
               
     def odom_callback(self, odom_msg):
         
