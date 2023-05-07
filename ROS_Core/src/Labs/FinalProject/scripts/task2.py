@@ -49,16 +49,16 @@ class SwiftHaulTasks:
         rospy.wait_for_service('/SwiftHaul/Start')
         self.start_client = rospy.ServiceProxy('/SwiftHaul/Start', Empty)
 
-        # set up the service client to get boss schedule
+        # set up the service client to get boss schedule (gets full schedule)
         rospy.wait_for_service('/SwiftHaul/BossSchedule')
         self.boss_schedule_client = rospy.ServiceProxy(
             '/SwiftHaul/BossSchedule', Schedule)
 
-        # set up service client for side task
+        # set up service client for side task (request to complete a side task)
         rospy.wait_for_service('/SwiftHaul/SideTask')
         self.side_task_client = rospy.ServiceProxy('/SwiftHaul/SideTask', Task)
 
-        # set up client for boss task
+        # set up client for boss task (request to complete a boss task)
         rospy.wait_for_service('/SwiftHaul/BossTask')
         self.boss_task_client = rospy.ServiceProxy('/SwiftHaul/BossTask', Task)
 
@@ -80,6 +80,8 @@ class SwiftHaulTasks:
     def plan_path(self):
         # If still aims for thecurrent waypoint, keep replanning.
         i = 0
+        rospy.sleep(2.0)
+        warehouse_idx = None
         
         while not rospy.is_shutdown() and i<self.num_warehouse:
             if self.odom_msg == None:
@@ -91,106 +93,64 @@ class SwiftHaulTasks:
             x_start = self.odom_msg.pose.pose.position.x
             y_start = self.odom_msg.pose.pose.position.y
 
-            # warehouse_idx= self.boss_schedule.goal_warehouse_index[i]
-            warehouse_idx = self.boss_task_client(TaskRequest()).task
+            # warehouse_idx= self.boss_schedule.goal_warehouse_index[i] ##we don't want the boss schudule we only want boss task (only need sechdule for rejoing after side task)
+            # request a task from the boss
+            try:
+                if warehouse_idx is None:
+                    warehouse_idx = self.boss_task_client(TaskRequest()).task
+                    print("For this Task Go to Warehouse: ", warehouse_idx)
+            except Exception as e:
+                continue
+
+            # Get information about the goal warehouse
             x_goal = self.warehouse_location[warehouse_idx][0]# x coordinate of the goal
             y_goal = self.warehouse_location[warehouse_idx][1]# y coordinate of the goal
             dx = self.warehouse_location[warehouse_idx][2]# x width of the warehouse
             dy = self.warehouse_location[warehouse_idx][3]# y width of the warehouse
-
             print("current location", x_start, ", ", y_start)
-            print("current goal", x_goal, ", ", y_goal)
+            print("goal location", x_goal, ", ", y_goal)
             print("dx: ", dx, "dy: ", dy)
-            print(np.abs(x_start - x_goal))
+            print("how far away x: " ,np.abs(x_start - x_goal), "how far away y: ", np.abs(y_start-y_goal))
 
-            
+            # plan a reference trajectory
             plan_request = PlanRequest([x_start, y_start], [x_goal, y_goal])
             print("request planned")
             plan_response = self.plan_client(plan_request)
             print("send plan to planning client to get plan response")
-
             
+            path_msg: Path
             path_msg = plan_response.path
             path_msg.header.stamp = rospy.get_rostime()
             path_msg.header.frame_id = 'map'
             self.path_pub.publish(path_msg)
             print("publish path")
            
-            # if we find we're within warehouse
-            if np.abs(x_start - x_goal) < dx and np.abs(y_start - y_goal) < dy:
+            # if we arrive at warehouse
+            if np.abs(x_start - x_goal) < dx*0.5 and np.abs(y_start - y_goal) < dy*0.5:
+                print("our distance from goal: ",np.abs(x_start - x_goal),"< dx: ", dx )
+
                 print("Truck inside warehouse")
-                response = self.reward_client(RewardRequest(warehouse_idx)) # check with boss if we made it
-                print("Boss agrees that we made it")
-                if response.done == False:
+                # calculate reward for completing a task
+                reward_response = self.reward_client(RewardRequest(warehouse_idx)) # check with boss if we made it
+                print("Boss agrees that complete task and gives us the reward")
+                if reward_response.done == False:
                     print("boss is unsatisfied with our arrival")
                 
-                print("Total reward so far: ", response.total_reward)
+                print("Total reward so far: ", reward_response.total_reward)
 
                 
-                # stop (plan route to self)! if boss hasn't started new task (meaning boss stopped)
+                # if boss hasn't started new task (meaning boss stopped) do nothing
                 while(self.boss_task_client(TaskRequest()).task == -1):
-                    "No new task received"
-                    plan_request = PlanRequest([x_start, y_start], [x_start, y_start])
-                    plan_response = self.plan_client(plan_request)
-                    path_msg = plan_response.path
-                    path_msg.header.stamp = rospy.get_rostime()
-                    path_msg.header.frame_id = 'map'
-                    self.path_pub.publish(path_msg)
+                    print("No new task received")
                     rospy.sleep(0.1)
 
                 i += 1
                 rospy.sleep(0.1)
+                warehouse_idx = None
             else:
                 rospy.sleep(1)
         rospy.loginfo("Finished!")   
         
-
-    # def calculate_waypoints(self):
-    #     # If still aims for thecurrent waypoint, keep replanning.
-    #     odom_msg = self.odom_msg
-
-    #     for i in range(len(self.goal_array)):
-
-    #         # Start position
-    #         x_start = odom_msg.pose.pose.position.x
-    #         y_start = odom_msg.pose.pose.position.y
-
-    #         x_goal = self.goal_array[i][0]  # x coordinate of the goal
-    #         y_goal = self.goal_array[i][1]  # y coordinate of the goal
-
-    #         plan_request = PlanRequest([x_start, y_start], [x_goal, y_goal])
-    #         plan_response = self.plan_client(plan_request)
-
-            
-    #         # # The following script will generate a reference path in [RefPath](scripts/task2_world/util.py#L65) class, which has been used in your Lab1's ILQR planner
-    #         # x = []
-    #         # y = []
-    #         # width_L = []
-    #         # width_R = []
-    #         # speed_limit = []
-
-    #         # for waypoint in plan_response.path.poses:
-    #         #     x.append(waypoint.pose.position.x)
-    #         #     y.append(waypoint.pose.position.y)
-    #         #     width_L.append(waypoint.pose.orientation.x)
-    #         #     width_R.append(waypoint.pose.orientation.y)
-    #         #     speed_limit.append(waypoint.pose.orientation.z)
-
-    #         # centerline = np.array([x, y])
-
-    #         # # This is the reference path that we passed to the ILQR planner in Lab1
-    #         # ref_path = RefPath(centerline, width_L, width_R,
-    #         #                    speed_limit, loop=False)
-
-    #         # need to rethink this current position logic
-    #         curr_x = odom_msg.pose.pose.position.x
-    #         curr_y = odom_msg.pose.pose.position.y
-
-    #         dist = np.sqrt((curr_x - x_goal)**2 + (curr_y - y_goal)**2)
-
-    #         while dist > 2.0:
-    #             rospy.sleep(1.0)
-
 
 if __name__ == '__main__':
     print("entered main")
