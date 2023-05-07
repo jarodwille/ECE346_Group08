@@ -20,6 +20,7 @@ from racecar_routing.srv import Plan, PlanResponse, PlanRequest
 from task2_world.util import RefPath, get_ros_param,  RealtimeBuffer
 # from racecar_planner.utils import get_obstacle_vertices
 from geometry_msgs.msg import PoseStamped
+from .RRT import RRT
 
 
 
@@ -79,9 +80,7 @@ class Waypoints:
         for marker in msg.markers:
             x = marker.pose.position.x
             y = marker.pose.position.y
-            self.obs_position.append([x, y])
-            
-       
+            self.obs_position.append([x, y])   
         
            
     # ### new added function 
@@ -119,61 +118,6 @@ class Waypoints:
         
     #     return path_points_xy
     
-    def rrt(self, waypoints, start_index, goal_index, obstacles, max_iter=1000, max_dist=0.1):
-        
-        start = waypoints[start_index]
-        goal = waypoints[goal_index]
-        # Initialize the tree with the start node
-        nodes = [start]
-        edges = []
-        
-        for i in range(max_iter):
-            # Randomly sample a point in the space
-            sample = np.random.rand(2) * np.array([20, 20]) - np.array([10, 10])
-            
-            # Find the nearest node in the tree to the sampled point
-            nearest_idx = np.argmin(np.linalg.norm(np.array(nodes) - sample, axis=1))
-            nearest_node = nodes[nearest_idx]
-            
-            # Calculate the vector to the sampled point and normalize it
-            v = sample - nearest_node
-            v_norm = v / np.linalg.norm(v)
-            
-            # Calculate the new point by adding a scaled vector to the nearest node
-            new_node = nearest_node + max_dist * v_norm
-            
-            # Check if the new node collides with any obstacles
-            if any(np.linalg.norm(np.array(obstacles) - new_node, axis=1) < 0.1):
-                continue
-            
-            # Add the new node to the tree and record the edge
-            nodes.append(new_node)
-            edges.append((nearest_idx, len(nodes) - 1))
-            
-            # Check if the goal is reached
-            if np.linalg.norm(new_node - goal) < 0.1:
-                goal_idx = len(nodes) - 1
-                break
-        
-        # If the goal was not reached, return an empty path
-        if not 'goal_idx' in locals():
-            return []
-        
-        # Build the path by tracing back through the edges
-        path = [goal]
-        curr_idx = goal_idx
-        while curr_idx != 0:
-            prev_idx = [e[0] for e in edges if e[1] == curr_idx][0]
-            path.append(nodes[prev_idx])
-            curr_idx = prev_idx
-        path.append(start)
-        path.reverse()
-        
-        return path
-
-
-
-
     
     # Define a function to calculate the angle between two points
     def angle_between_points(self, x1, y1, x2, y2):
@@ -191,22 +135,18 @@ class Waypoints:
             # Calculate the Euclidean distance between current position and the obstacle position
             distance = np.linalg.norm(np.array(obs_position[i]) - np.array([x_curr, y_curr]))
             
-            # # Calculate the angle between your current position and the obstacle position
-            # obstacle_angle = self.angle_between_points(x_curr, y_curr, obs[0], obs[1])
-
-
             # Check if the distance is less than 1 meter and if the obstacle is in front of you
             if distance < 1.0:
                 selected_obs.append(obs_position[i])
                 self.obs_list_rollout.append(i)
                 
         return selected_obs
-        
-        
-                
+             
                 
     ### new added function
     def new_referencepath(self, pathnav):
+        Flag: bool
+        Flag = False
         posx = []
         posy = []
 
@@ -227,17 +167,40 @@ class Waypoints:
             distances = np.linalg.norm(positions - waypoints[i], axis=1)
             if np.any(distances < 1.0):
                 nearby_indices.append(i)
-                
+                        
         
         if len(nearby_indices) == 0:
-            return []
+            pass
         else:
-            # start_index = 0 if nearby_indices[0] == 0 else nearby_indices[0] - 1
-            # goal_index = len(waypoints) - 1 if nearby_indices[-1] == len(waypoints) - 1 else nearby_indices[-1] + 1
-            # new_ref = self.calllanelet(waypoints, 0, -1, positions)
-            new_ref = self.rrt(waypoints, 0, -1, positions, 1000, 0.1)
+            ### changed logic: if reference path go through obstacles, only replace that part waypoints but not all
+            start_index = 0 if nearby_indices[0] == 0 else nearby_indices[0] - 1
+            goal_index = len(waypoints) - 1 if nearby_indices[-1] == len(waypoints) - 1 else nearby_indices[-1] + 1
+                 
+            print("Start rrt planning")
+
+            # Set Initial parameters
+            positions = [lst + [0.5] for lst in positions]
+            rrt = RRT(start=waypoints[start_index], goal=waypoints[goal_index],
+                    randArea=[-10, 10], obstacleList=positions)
+            new_ref = rrt.Planning()
+            
+            # new_ref = self.rrt(waypoints, start_index, goal_index, positions, 1000, 0.1)
+            print('new_ref', new_ref)
+            
+            # Loop through the original path and find the waypoints to be replaced
+            replace_idxs = list(range(start_index + 1, goal_index))
+            print(replace_idxs)
+            
+            # Replace the waypoints with the corresponding waypoints from the replanned path
+            for i, idx in enumerate(replace_idxs):
+                print('idx', idx)
+                print('new_ref', new_ref)
+                waypoints[idx] = new_ref[i]
+            
+            Flag = True
+            
         
-        return new_ref
+        return waypoints, Flag
         
         
        
@@ -265,14 +228,14 @@ class Waypoints:
             plan_response = self.plan_client(plan_request)
             
             ### Newly added code
-            replan = self.new_referencepath(plan_response)
+            replan, replan_flag = self.new_referencepath(plan_response)
             
             path_msg: Path
             
             print('replan', replan)
             print('-------------------------------------')
             
-            if not replan: ### check if this is empty
+            if replan_flag == False: ### check if this is empty
                 print('not replan---------------------------------------------')
                 path_msg = plan_response.path
                
