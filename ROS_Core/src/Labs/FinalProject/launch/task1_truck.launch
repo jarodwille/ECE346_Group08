@@ -41,7 +41,7 @@
 
     <node pkg="final_project" type="run_waypoints.py" name="waypoints" output="$(arg output)"/>
 
-<node pkg="final_project" type="task1_obstacle_detection_node.py" name="static_obstacle_detection_node" output="$(arg output)">
+    <node pkg="final_project" type="task1_obstacle_detection_node.py" name="static_obstacle_detection_node" output="$(arg output)">
         <param name="odom_topic"           value="$(arg odom_topic)" />
         <param name="static_obs_size"      value="$(arg static_obs_size)" />
         <param name="static_obs_topic"     value="$(arg static_obs_topic)" />

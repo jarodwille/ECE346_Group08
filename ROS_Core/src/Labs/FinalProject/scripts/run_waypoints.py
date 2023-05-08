@@ -49,9 +49,9 @@ class Waypoints:
         
         self.odom_msg = None
         ### for simulation
-        self.pose_sub = rospy.Subscriber('/Simulation/Pose', Odometry, self.odom_callback, queue_size=10)
+        # self.pose_sub = rospy.Subscriber('/Simulation/Pose', Odometry, self.odom_callback, queue_size=10)
         # ### for real truck
-        # self.pose_sub = rospy.Subscriber('/SLAM/Pose', Odometry, self.odom_callback, queue_size=10)
+        self.pose_sub = rospy.Subscriber('/SLAM/Pose', Odometry, self.odom_callback, queue_size=10)
         
         self.path_pub = rospy.Publisher('Routing/Path', Path, queue_size=10,latch = True)
         
@@ -141,64 +141,82 @@ class Waypoints:
                 
     ### new added function
     def new_referencepath(self, pathnav):
-        Flag: bool
-        Flag = False
+       
         posx = []
         posy = []
+        width_L = []
+        width_R = []
+        
+        # # Start position
+        # x_start = self.odom_msg.pose.pose.position.x
+        # y_start = self.odom_msg.pose.pose.position.y
 
         iterpath = pathnav.path
         for pose in iterpath.poses:
             x = pose.pose.position.x
             y = pose.pose.position.y
+            width_L.append(pose.pose.orientation.x)
+            width_R.append(pose.pose.orientation.y)
             posx.append(x)
             posy.append(y)
           
         waypoints = np.column_stack((posx, posy))
         ### get the positions of the filtered obstacles
         positions = np.array(self.rollout_obs(self.obs_position))
-        print('selected obstacle positions', positions)
+        # print('selected obstacle positions', positions)
         
         nearby_indices = []
         for i in range(len(waypoints)):
             distances = np.linalg.norm(positions - waypoints[i], axis=1)
-            if np.any(distances < 1.0):
+            if np.any(distances < 0.1):
                 nearby_indices.append(i)
                         
+        waypoints = waypoints.tolist()
+        
+        # if len(nearby_indices) == 0:
+        #     pass
+        # else:
+        #     ### changed logic: if reference path go through obstacles, only replace that part waypoints but not all
+        #     start_index = 0 if nearby_indices[0] == 0 else nearby_indices[0] - 1
+        #     goal_index = len(waypoints) - 1 if nearby_indices[-1] == len(waypoints) - 1 else nearby_indices[-1] + 1
+                 
+        #     print("Start rrt planning")
+
+        #     # Set Initial parameters
+        #     size_column = np.full((positions.shape[0], 1), 0.25)
+        #     positions = np.hstack((positions, size_column)) # add size to positions
+
+        #     rrt = RRT(start=waypoints[start_index], goal=waypoints[goal_index],
+        #             randArea=[x_start - 0.5, x_start + 0.5], obstacleList=positions)
+        #     new_ref = rrt.Planning()
+            
+        #     # new_ref = self.rrt(waypoints, start_index, goal_index, positions, 1000, 0.1)
+        #     # print('new_ref', new_ref)
+            
+        #     # print("original", waypoints)
+        #     # print("start index", start_index)
+        #     # print("end index", goal_index)
+        #     # Replace the waypoints with the corresponding waypoints from the replanned path
+        #     waypoints = np.delete(waypoints, slice(start_index, goal_index+1), axis=0)
+        #     # print("after delete", waypoints)
+        #     waypoints = np.insert(waypoints, start_index, new_ref, axis=0)
+        #     # print("after replace, final", waypoints)
         
         if len(nearby_indices) == 0:
             pass
         else:
-            ### changed logic: if reference path go through obstacles, only replace that part waypoints but not all
-            start_index = 0 if nearby_indices[0] == 0 else nearby_indices[0] - 1
-            goal_index = len(waypoints) - 1 if nearby_indices[-1] == len(waypoints) - 1 else nearby_indices[-1] + 1
-                 
-            print("Start rrt planning")
-
-            # Set Initial parameters
-            size_column = np.full((positions.shape[0], 1), 0.25)
-            positions = np.hstack((positions, size_column)) # add size to positions
-
-            rrt = RRT(start=waypoints[start_index], goal=waypoints[goal_index],
-                    randArea=[-10, 10], obstacleList=positions)
-            new_ref = rrt.Planning()
-            
-            # new_ref = self.rrt(waypoints, start_index, goal_index, positions, 1000, 0.1)
-            print('new_ref', new_ref)
-            
-            print("original", waypoints)
-            print("start index", start_index)
-            print("end index", goal_index)
-            # Replace the waypoints with the corresponding waypoints from the replanned path
-            waypoints = np.delete(waypoints, slice(start_index, goal_index+1), axis=0)
-            print("after delete", waypoints)
-            waypoints = np.insert(waypoints, start_index, new_ref, axis=0)
-            print("after replace, final", waypoints)
-
-            
-            Flag = True
+            for i in nearby_indices:
+                L = width_L[i]
+                R = width_R[i]
+                if L > R:
+                    posy[i] += L
+                else:
+                    posx[i] += R
+                    
+            waypoints = (np.column_stack((posx, posy))).tolist()
             
         
-        return waypoints, Flag
+        return waypoints
         
         
        
@@ -216,8 +234,6 @@ class Waypoints:
             x_start = self.odom_msg.pose.pose.position.x
             y_start = self.odom_msg.pose.pose.position.y
             
-            print('start pos', x_start, y_start)
-            
             x_goal = self.goal_array[i][0]# x coordinate of the goal
             y_goal = self.goal_array[i][1]# y coordinate of the goal
                         
@@ -225,32 +241,43 @@ class Waypoints:
             plan_request = PlanRequest([x_start, y_start], [x_goal, y_goal])
             plan_response = self.plan_client(plan_request)
             
-            ### Newly added code
-            replan, replan_flag = self.new_referencepath(plan_response)
             
-            path_msg: Path
             
-            print('replan', replan)
-            print('-------------------------------------')
+            # ### Newly added code
+            # path2pub= self.new_referencepath(plan_response)
             
-            if replan_flag == False: ### check if this is empty
-                print('not replan---------------------------------------------')
-                path_msg = plan_response.path
+            # path_msg: Path
+            
+        
+            
+            # # if replan_flag == False: ### check if this is empty
+            # #     print('not replan---------------------------------------------')
+            # #     path_msg = plan_response.path
                
-            else: ### convert nested list into nav_msg.msg type
-                print('in replan----------------------------------------------')
-                path_msg = Path()
-                for point in replan:
-                    pose = PoseStamped()
-                    pose.pose.position.x = point[0]
-                    pose.pose.position.y = point[1]
-                    pose.pose.position.z = 0.0
-                    path_msg.poses.append(pose)
-                    
-            path_msg.header.stamp = rospy.get_rostime()
-            path_msg.header.frame_id = 'map'
+            # # else: ### convert nested list into nav_msg.msg type
+            # #     print('in replan----------------------------------------------')
+            # #     path_msg = Path()
+            # #     for point in replan:
+            # #         pose = PoseStamped()
+            # #         pose.pose.position.x = point[0]
+            # #         pose.pose.position.y = point[1]
+            # #         pose.pose.position.z = 0.0
+            # #         path_msg.poses.append(pose)
+            
+            
+            # path_msg = Path()
+            # for point in path2pub:
+            #     pose = PoseStamped()
+            #     pose.pose.position.x = point[0]
+            #     pose.pose.position.y = point[1]
+            #     pose.pose.position.z = 0.0
+            #     path_msg.poses.append(pose)
                 
-            self.path_pub.publish(path_msg)
+                    
+            # path_msg.header.stamp = rospy.get_rostime()
+            # path_msg.header.frame_id = 'map'
+                
+            # self.path_pub.publish(path_msg)
                 
             
             
@@ -260,11 +287,11 @@ class Waypoints:
             ## can be commented for now for testing  
             
              
-            # path_msg: Path
-            # path_msg = plan_response.path
-            # path_msg.header.stamp = rospy.get_rostime()
-            # path_msg.header.frame_id = 'map'
-            # self.path_pub.publish(path_msg)
+            path_msg: Path
+            path_msg = plan_response.path
+            path_msg.header.stamp = rospy.get_rostime()
+            path_msg.header.frame_id = 'map'
+            self.path_pub.publish(path_msg)
             
             
             ## can be commented for now for testing
