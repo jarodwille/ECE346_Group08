@@ -26,8 +26,8 @@ class SwiftHaulTasks:
 
     def load_warehouse_info(self):
 
-        # Retrieve Warehouse Information from yaml file
-        with open('ECE346_Group08/ROS_Core/src/Labs/FinalProject/task2.yaml', 'r') as stream:
+        # Retrieve Warehouse Information from yaml file (this is my exact path)
+        with open('/home/maddie/ECE346_Group08/ROS_Core/src/Labs/FinalProject/task2.yaml', 'r') as stream:
             warehouse_info = yaml.safe_load(stream)
 
         # HACK: No failsafe is implemented for invalid warehouse config
@@ -71,7 +71,9 @@ class SwiftHaulTasks:
         self.plan_client = rospy.ServiceProxy('/routing/plan', Plan)
 
     def setup_sub_pub(self):
+        #change commented version depending on if we run in simulation or on truck 
         self.pose_sub = rospy.Subscriber('/Simulation/Pose', Odometry, self.odom_callback, queue_size=1)
+        #self.pose_sub = rospy.Subscriber('/SLAM/Pose', Odometry, self.odom_callback, queue_size=1)
         self.path_pub = rospy.Publisher('/Routing/Path', Path, queue_size=10, latch = True)
 
     def odom_callback(self, odom_msg):
